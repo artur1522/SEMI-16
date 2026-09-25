@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    height: 100%;
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: theme('colors.background');
+    color: theme('colors.textPrimary');
+    transition: background-color 200ms ease, color 200ms ease;
+  }
+
+  html.dark body {
+    background-color: theme('colors.darkBackground');
+    color: theme('colors.darkTextPrimary');
+  }
+
+  body,
+  header,
+  aside,
+  main,
+  article,
+  section,
+  form,
+  input,
+  select,
+  textarea,
+  button {
+    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease,
+      fill 200ms ease, stroke 200ms ease;
+  }
+}
+
+@layer utilities {
+  .animate-slide-in {
+    animation: slide-in 300ms ease-out both;
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .flow-dash {
+    background-image: repeating-linear-gradient(
+      90deg,
+      currentColor 0 5px,
+      transparent 5px 10px
+    );
+    background-size: 10px 100%;
+    animation: flow-dash 700ms linear infinite;
+  }
+
+  @keyframes flow-dash {
+    to {
+      background-position: 10px 0;
+    }
+  }
+
+  .animate-flow-arrow {
+    animation: flow-arrow 1.2s ease-in-out infinite;
+  }
+
+  @keyframes flow-arrow {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+
+  .animate-node-alert {
+    animation: node-alert 900ms ease-in-out infinite;
+  }
+
+  @keyframes node-alert {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.55;
+      transform: scale(1.15);
+    }
+  }
+}

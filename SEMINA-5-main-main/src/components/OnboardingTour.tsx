@@ -51,7 +51,7 @@ export default function OnboardingTour() {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-2xl border border-border bg-white p-6 shadow-2xl dark:border-darkBorder dark:bg-darkCard">
         <div className="flex items-start justify-between gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
+          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 bg-gradient-to-br from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_18px_rgba(124,58,237,0.2)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_18px_rgba(139,92,246,0.26)]">
             <step.icon className="h-6 w-6" />
           </span>
           <button
@@ -78,7 +78,7 @@ export default function OnboardingTour() {
                 key={index}
                 className={`h-1.5 rounded-full transition-all ${
                   index === current
-                    ? 'w-6 bg-primary dark:bg-darkPrimary'
+                     ? 'w-6 bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90'
                     : 'w-1.5 bg-textSecondary/30 dark:bg-darkTextSecondary/30'
                 }`}
               />
@@ -104,7 +104,7 @@ export default function OnboardingTour() {
                   setCurrent((previous) => previous + 1)
                 }
               }}
-              className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:bg-darkPrimary"
+              className="rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40"
             >
               {current === steps.length - 1 ? 'Comenzar' : 'Siguiente'}
             </button>

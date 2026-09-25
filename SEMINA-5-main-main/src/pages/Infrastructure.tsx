@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { PiggyBank, Plus, Server, ShieldCheck, Workflow, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Info, PiggyBank, Plus, Server, ShieldCheck, Workflow, Trash2 } from 'lucide-react'
 import RegionCard from '../components/RegionCard'
 import { useCloudStore } from '../store/cloudStore'
 import { regionReferences } from '../data/regions'
 import { awsServices } from '../data/awsServices'
+import { getServerMeaning } from '../data/serverNames'
 import type { CostEnvironment } from '../types/cloud'
 
 const environments: { value: CostEnvironment; label: string }[] = [
@@ -62,9 +63,25 @@ export default function Infrastructure() {
   const [serviceId, setServiceId] = useState('ec2')
   const [regionId, setRegionId] = useState(regionReferences[0].id)
   const [environment, setEnvironment] = useState<CostEnvironment>('production')
+  const [lastAddedServerId, setLastAddedServerId] = useState<string | null>(null)
+  const serverRowRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  useEffect(() => {
+    if (!lastAddedServerId) return
+
+    const node = serverRowRefs.current[lastAddedServerId]
+    node?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+
+    const timeout = window.setTimeout(() => {
+      setLastAddedServerId(null)
+    }, 2200)
+
+    return () => window.clearTimeout(timeout)
+  }, [lastAddedServerId])
 
   function handleAdd() {
-    addServer({ serviceId, regionId, environment })
+    const newServer = addServer({ serviceId, regionId, environment })
+    setLastAddedServerId(newServer.id)
   }
 
   const servicePricingRows = awsServices.map((service) => {
@@ -97,7 +114,7 @@ export default function Infrastructure() {
         </span>
       </div>
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-darkBorder dark:bg-darkCard">
+      <section className="glass-card mt-6 rounded-3xl p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
@@ -119,7 +136,7 @@ export default function Infrastructure() {
             <select
               value={serviceId}
               onChange={(event) => setServiceId(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             >
               {awsServices.map((service) => (
                 <option key={service.id} value={service.id}>
@@ -133,7 +150,7 @@ export default function Infrastructure() {
             <select
               value={regionId}
               onChange={(event) => setRegionId(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             >
               {regionReferences.map((region) => (
                 <option key={region.id} value={region.id}>
@@ -147,7 +164,7 @@ export default function Infrastructure() {
             <select
               value={environment}
               onChange={(event) => setEnvironment(event.target.value as CostEnvironment)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             >
               {environments.map((env) => (
                 <option key={env.value} value={env.value}>
@@ -160,7 +177,7 @@ export default function Infrastructure() {
             <button
               type="button"
               onClick={handleAdd}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 md:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40 md:w-auto"
             >
               <Plus className="h-4 w-4" />
               Agregar servidor
@@ -168,34 +185,58 @@ export default function Infrastructure() {
           </div>
         </div>
 
-        <div className="mt-5 max-h-64 space-y-1.5 overflow-y-auto pr-1">
-          {servers.map((server) => (
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-accentFrom/20 bg-gradient-to-r from-accentFrom/5 to-accentTo/5 p-3 text-xs leading-relaxed text-textSecondary dark:border-darkAccentFrom/30 dark:from-darkAccentFrom/10 dark:to-darkAccentTo/10 dark:text-darkTextSecondary">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-accentFrom dark:text-darkAccentFrom" />
+          <p>
+            Los nombres usan el formato <span className="font-semibold text-textPrimary dark:text-darkTextPrimary">servicio-región-número</span>. Debajo de cada nombre se muestra su significado completo.
+          </p>
+        </div>
+
+        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+          {servers.map((server) => {
+            const isRecentlyAdded = server.id === lastAddedServerId
+
+            return (
             <div
               key={server.id}
-              className="flex items-center justify-between gap-3 rounded-xl bg-background p-3 dark:bg-darkBackground"
+              ref={(node) => {
+                serverRowRefs.current[server.id] = node
+              }}
+              className={`flex items-center justify-between gap-3 rounded-2xl border p-3 transition-all duration-300 ${
+                isRecentlyAdded
+                  ? 'border-violet-300/60 bg-violet-500/[0.06] shadow-[0_0_0_1px_rgba(168,85,247,0.28),0_0_24px_rgba(168,85,247,0.16)] dark:border-violet-400/40 dark:bg-violet-500/10 dark:shadow-[0_0_0_1px_rgba(192,132,252,0.35),0_0_24px_rgba(168,85,247,0.18)]'
+                  : 'border-white/40 bg-white/60 dark:border-white/5 dark:bg-slate-900/30'
+              }`}
             >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
-                  {server.name}
-                </p>
-                <p className="truncate text-xs text-textSecondary dark:text-darkTextSecondary">
-                  {regionReferences.find((region) => region.id === server.regionId)?.name ??
-                    server.regionId}{' '}
-                  · {awsServices.find((service) => service.id === server.serviceId)?.name ??
-                    server.serviceId}{' '}
-                  · {server.environment}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p
+                    className="truncate text-sm font-semibold text-textPrimary dark:text-darkTextPrimary"
+                    title={getServerMeaning(server)}
+                  >
+                    {server.name}
+                  </p>
+                  {isRecentlyAdded && (
+                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
+                      Nuevo
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs leading-relaxed text-textSecondary dark:text-darkTextSecondary">
+                  {getServerMeaning(server)}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => removeServer(server.id)}
-                aria-label={`Eliminar ${server.name}`}
+                aria-label={`Eliminar ${server.name}: ${getServerMeaning(server)}`}
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-textSecondary transition-colors hover:bg-danger/10 hover:text-danger dark:text-darkTextSecondary dark:hover:bg-darkDanger/10 dark:hover:text-darkDanger"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
-          ))}
+            )
+          })}
           {servers.length === 0 && (
             <p className="rounded-xl bg-background p-4 text-center text-sm text-textSecondary dark:bg-darkBackground dark:text-darkTextSecondary">
               Sin servidores. Agrega el primero arriba.

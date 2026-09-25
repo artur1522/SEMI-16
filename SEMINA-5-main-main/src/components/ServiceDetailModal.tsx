@@ -66,7 +66,7 @@ export default function ServiceDetailModal({ service, popularity = 0, onClose }:
       <div
         ref={panelRef}
         tabIndex={-1}
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-white p-6 shadow-xl outline-none focus:ring-2 focus:ring-primary/40 dark:border-darkBorder dark:bg-darkCard dark:focus:ring-darkPrimary/40"
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-white p-6 shadow-xl outline-none focus:ring-2 focus:ring-accentFrom/40 dark:border-darkBorder dark:bg-darkCard dark:focus:ring-darkAccentFrom/40"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -169,7 +169,7 @@ export default function ServiceDetailModal({ service, popularity = 0, onClose }:
               href={service.docsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3.5 py-2 text-sm font-semibold text-white shadow-[0_0_14px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40"
             >
               Ver documentación oficial
               <ExternalLink className="h-4 w-4" />

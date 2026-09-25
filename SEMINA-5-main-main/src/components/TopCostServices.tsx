@@ -1,11 +1,13 @@
 import { Trophy } from 'lucide-react'
 import type { CostItem } from '../types/cloud'
 
-const currency = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0
-})
+function formatMoney(amount: number): string {
+  return `${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: true
+  }).format(amount)} USD`
+}
 
 const RANK_STYLES = ['text-amber-400', 'text-slate-400', 'text-orange-400']
 
@@ -22,25 +24,21 @@ export default function TopCostServices({ items }: { items: CostItem[] }) {
         </h3>
       </div>
 
-      <ul className="mt-4 space-y-3">
+      <ul className="mt-5 space-y-4">
         {top.map((item, index) => (
           <li key={item.id}>
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <span className={`text-base font-bold ${RANK_STYLES[index]}`}>#{index + 1}</span>
-                <span className="text-sm font-medium text-textPrimary dark:text-darkTextPrimary">
+                <span className="truncate text-sm font-medium text-textPrimary dark:text-darkTextPrimary">
                   {item.service}
                 </span>
               </div>
-              <span className="text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
-                {currency.format(item.monthlyCost)}
-                <span className="text-xs font-normal text-textSecondary dark:text-darkTextSecondary">
-                  {' '}
-                  /mes
-                </span>
+              <span className="shrink-0 text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
+                {formatMoney(item.monthlyCost)}
               </span>
             </div>
-            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-background dark:bg-darkBackground">
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-background dark:bg-darkBackground">
               <div
                 className="h-full rounded-full bg-primary transition-all duration-300 dark:bg-darkPrimary"
                 style={{ width: `${(item.monthlyCost / max) * 100}%` }}

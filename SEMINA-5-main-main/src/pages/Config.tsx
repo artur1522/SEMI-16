@@ -49,7 +49,7 @@ function Select<T extends string>({
         <select
           value={value}
           onChange={(event) => onChange(event.target.value as T)}
-          className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-3 pr-10 text-sm font-medium text-textPrimary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:focus:border-darkPrimary dark:focus:ring-darkPrimary/20"
+          className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-3 pr-10 text-sm font-medium text-textPrimary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -96,18 +96,18 @@ function SegmentedControl<T extends string>({
               type="button"
               onClick={() => onChange(option.value)}
               aria-pressed={active}
-              className={`flex items-start gap-2 rounded-xl border p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+              className={`flex items-start gap-2 rounded-xl border p-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
                 active
-                  ? 'border-primary bg-primary/5 text-textPrimary dark:border-darkPrimary dark:bg-darkPrimary/10'
-                  : 'border-border bg-white text-textSecondary hover:bg-background dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:bg-darkBackground'
+                  ? 'border-transparent bg-gradient-to-r from-accentFrom/10 via-white to-accentTo/10 text-textPrimary shadow-[0_0_12px_rgba(124,58,237,0.12)] dark:from-darkAccentFrom/15 dark:via-darkCard dark:to-darkAccentTo/15 dark:shadow-[0_0_12px_rgba(139,92,246,0.18)] dark:focus:ring-darkAccentFrom/40'
+                  : 'border-border bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/40'
               }`}
             >
               <span
-                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                  active
-                    ? 'border-primary bg-primary dark:border-darkPrimary dark:bg-darkPrimary'
-                    : 'border-textSecondary/40 dark:border-darkTextSecondary/40'
-                }`}
+className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                   active
+                     ? 'border-transparent bg-slate-950 bg-gradient-to-br from-accentFrom/90 to-accentTo/90 shadow-[0_0_8px_rgba(124,58,237,0.2)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_8px_rgba(139,92,246,0.26)]'
+                     : 'border-textSecondary/40 dark:border-darkTextSecondary/40'
+                 }`}
               >
                 {active && <Check className="h-3 w-3 text-white" />}
               </span>
@@ -231,7 +231,7 @@ export default function Config() {
           <button
             type="button"
             onClick={() => updatePreferences('onboardingSeen', false)}
-            className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:bg-darkPrimary"
+            className="rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40"
           >
             Volver a mostrar el tour
           </button>

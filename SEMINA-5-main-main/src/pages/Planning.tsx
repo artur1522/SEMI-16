@@ -7,6 +7,7 @@ import type {
 } from '../types/cloud'
 import { awsServices } from '../data/awsServices'
 import { regionReferences } from '../data/regions'
+import { suggestArchitectures, type ArchitectureSuggestion } from '../data/architecture'
 import { useCloudStore } from '../store/cloudStore'
 
 const currency = new Intl.NumberFormat('es-ES', {
@@ -156,7 +157,7 @@ const emptyForm: FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>
 
-const inputClass = 'w-full rounded-md border border-border bg-white px-3 py-1.5 text-xs text-textPrimary placeholder:text-textSecondary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:ring-darkPrimary/20'
+const inputClass = 'w-full rounded-md border border-border bg-white px-3 py-1.5 text-xs text-textPrimary placeholder:text-textSecondary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20'
 const labelClass = 'mb-1 block text-[11px] font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary'
 
 function fieldClass(hasError: boolean) {
@@ -205,69 +206,6 @@ function formatDate(iso: string) {
     hour: '2-digit',
     minute: '2-digit'
   }).format(date)
-}
-
-const SERVICE_MAP: Record<string, string> = {
-  EC2: 'ec2',
-  S3: 's3',
-  RDS: 'rds',
-  IAM: 'iam',
-  VPC: 'vpc',
-  'Route 53': 'route53',
-  CloudFront: 'cloudfront'
-}
-
-interface ArchitectureSuggestion {
-  name: string
-  tagline: string
-  stack: string[]
-  serviceIds: string[]
-  estimatedCost: number
-  rationale: string
-}
-
-function suggestArchitectures(
-  appType: string,
-  estimatedUsers: number,
-  availabilityLevel: string
-): ArchitectureSuggestion[] {
-  if (!appType || !Number.isFinite(estimatedUsers) || estimatedUsers <= 0 || !availabilityLevel) return []
-  const isMobile = appType.toLowerCase().includes('movil') || appType.toLowerCase().includes('mobile')
-  const isApi = appType.toLowerCase().includes('api')
-  const base = isApi ? ['API Gateway', 'Lambda', 'DynamoDB'] : isMobile ? ['CloudFront', 'S3', 'API Gateway'] : ['CloudFront', 'S3', 'EC2', 'RDS']
-  const multiplier = availabilityLevel === 'critica' ? 1.8 : availabilityLevel === 'alta' ? 1.3 : 1
-  const baseCosts: Record<string, number> = { EC2: 220, S3: 40, RDS: 180, CloudFront: 90, 'API Gateway': 70, Lambda: 60, DynamoDB: 80, VPC: 50, 'Route 53': 25, IAM: 5 }
-  const costFor = (stack: string[], mult: number) =>
-    Math.round((stack.reduce((sum, s) => sum + (baseCosts[s] ?? 100), 0) + estimatedUsers * 0.01) * mult)
-
-  const variants: Omit<ArchitectureSuggestion, 'serviceIds'>[] = [
-    {
-      name: 'Recomendada',
-      tagline: 'Equilibrio entre costo y rendimiento',
-      stack: base,
-      estimatedCost: costFor(base, multiplier),
-      rationale: `Arquitectura sugerida para ${estimatedUsers.toLocaleString('es-ES')} usuarios con disponibilidad ${availabilityLevel}.`
-    },
-    {
-      name: 'Optimizada en costo',
-      tagline: 'Reduce gasto usando servicios administrados',
-      stack: isApi ? ['Lambda', 'DynamoDB', 'S3'] : isMobile ? ['S3', 'CloudFront', 'Route 53'] : ['S3', 'EC2', 'Route 53'],
-      estimatedCost: costFor(isApi ? ['Lambda', 'DynamoDB', 'S3'] : isMobile ? ['S3', 'CloudFront', 'Route 53'] : ['S3', 'EC2', 'Route 53'], multiplier * 0.78),
-      rationale: 'Maximiza ahorro eliminando instancias sobrantes y priorizando servicios 100% administrados.'
-    },
-    {
-      name: 'Alta resistencia',
-      tagline: 'Redundancia y recuperación para cargas críticas',
-      stack: [...new Set([...base, 'VPC', 'Route 53', 'IAM'])],
-      estimatedCost: costFor([...new Set([...base, 'VPC', 'Route 53', 'IAM'])], multiplier * 1.35),
-      rationale: 'Añade red aislada, DNS tolerante a fallos y control de accesos para escenarios de producción.'
-    }
-  ]
-
-  return variants.map((variant) => ({
-    ...variant,
-    serviceIds: variant.stack.map((s) => SERVICE_MAP[s]).filter((id): id is string => Boolean(id))
-  }))
 }
 
 export default function Planning() {
@@ -437,9 +375,11 @@ export default function Planning() {
                   key={template.id}
                   type="button"
                   onClick={() => applyTemplate(template)}
-                  className="flex flex-col items-center gap-1 rounded-lg border border-border bg-background px-2 py-2 text-center text-[11px] font-medium text-textPrimary transition-colors hover:border-primary/40 hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkPrimary/40 dark:hover:bg-darkPrimary/5"
+                   className="flex flex-col items-center gap-1 rounded-lg border border-border bg-background px-2 py-2 text-center text-[11px] font-medium text-textPrimary transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/40"
                 >
-                  {template.icon}
+                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-950 bg-gradient-to-br from-accentFrom/90 to-accentTo/90 text-white shadow-sm dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90">
+                     {template.icon}
+                   </span>
                   {template.name}
                 </button>
               ))}
@@ -487,7 +427,7 @@ export default function Planning() {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 {awsServices.map((s) => (
                   <label key={s.id} className="flex items-center gap-2 rounded-md border border-border bg-white px-2 py-1 text-xs text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary">
-                    <input type="checkbox" checked={form.selectedServices.includes(s.id)} onChange={() => handleServiceToggle(s.id)} className="h-4 w-4 accent-primary" />
+                    <input type="checkbox" checked={form.selectedServices.includes(s.id)} onChange={() => handleServiceToggle(s.id)} className="h-4 w-4 accent-accentFrom dark:accent-darkAccentFrom" />
                     <span className="truncate">{s.name}</span>
                   </label>
                 ))}
@@ -508,8 +448,8 @@ export default function Planning() {
             </div>
 
             {form.availabilityLevel && (
-              <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-textPrimary dark:border-darkPrimary/30 dark:bg-darkPrimary/5 dark:text-darkTextPrimary">
-                <Timer className="h-4 w-4 shrink-0 text-primary dark:text-darkPrimary" />
+              <div className="flex items-center gap-2 rounded-md border border-accentFrom/20 bg-gradient-to-r from-accentFrom/5 to-accentTo/5 px-3 py-2 text-xs text-textPrimary dark:border-darkAccentFrom/30 dark:from-darkAccentFrom/10 dark:to-darkAccentTo/10 dark:text-darkTextPrimary">
+                <Timer className="h-4 w-4 shrink-0 text-accentFrom dark:text-darkAccentFrom" />
                 <span>
                   Tiempo estimado de implementación:{' '}
                   <strong className="font-semibold">{estimationRange(form.availabilityLevel)}</strong>
@@ -517,7 +457,7 @@ export default function Planning() {
               </div>
             )}
 
-            <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-white">
+            <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_14px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40">
               <Plus className="h-4 w-4" /> Registrar propuesta
             </button>
           </form>
@@ -526,9 +466,9 @@ export default function Planning() {
             <button
               type="button"
               onClick={openSuggestions}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-center text-sm text-textPrimary shadow-sm transition-colors hover:bg-primary/10 dark:border-darkPrimary/40 dark:bg-darkCard dark:text-darkTextPrimary"
+              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-accentFrom/30 bg-gradient-to-r from-accentFrom/5 to-accentTo/5 p-4 text-center text-sm text-textPrimary shadow-sm transition-all hover:border-accentFrom/50 hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkAccentFrom/40 dark:from-darkAccentFrom/10 dark:to-darkAccentTo/10 dark:hover:border-darkAccentFrom/50 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:text-darkTextPrimary"
             >
-              <Lightbulb className="h-4 w-4 text-primary dark:text-darkPrimary" />
+              <Lightbulb className="h-4 w-4 text-accentFrom dark:text-darkAccentFrom" />
               <span className="flex flex-col items-center gap-1">
                 <span className="flex items-center gap-2"><span className="font-semibold">Ver sugerencias de arquitectura</span><ChevronDown className="h-4 w-4" /></span>
                 <span className="text-xs text-textSecondary dark:text-darkTextSecondary">
@@ -545,11 +485,33 @@ export default function Planning() {
             </div>
             <div className="flex items-center gap-2">
               <div className="flex gap-2">
-                {filterTabs.map((tab) => (
-                  <button key={tab.value} onClick={() => setStatusFilter(tab.value)} className={`rounded-full border px-3 py-1 text-xs text-textPrimary transition-colors dark:text-darkTextPrimary ${statusFilter === tab.value ? 'border-primary bg-primary text-white dark:border-darkPrimary dark:bg-darkPrimary' : 'border-border bg-white dark:border-darkBorder dark:bg-darkCard'}`}>{tab.label} ({filterCounts[tab.value]})</button>
-                ))}
+                 {filterTabs.map((tab) => (
+                   <button
+                     key={tab.value}
+                     type="button"
+                     onClick={() => setStatusFilter(tab.value)}
+                     className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
+                       statusFilter === tab.value
+                         ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
+                         : 'border-border bg-white text-textPrimary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/40'
+                     }`}
+                   >
+                     {tab.label} ({filterCounts[tab.value]})
+                   </button>
+                 ))}
               </div>
-              <button onClick={handleToggleCompareMode} className="ml-2 inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-1 text-xs text-textPrimary shadow-sm dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary"><Columns className="h-4 w-4" /> Comparar</button>
+               <button
+                 type="button"
+                 onClick={handleToggleCompareMode}
+                 aria-pressed={compareMode}
+                 className={`ml-2 inline-flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-semibold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
+                   compareMode
+                     ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
+                     : 'border-border bg-white text-textPrimary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/40'
+                 }`}
+               >
+                 <Columns className="h-4 w-4" /> Comparar
+               </button>
             </div>
           </div>
 
@@ -584,7 +546,7 @@ export default function Planning() {
                           </span>
                           {compareMode && (
                             <label className="ml-auto inline-flex items-center gap-2 text-[11px] text-textSecondary dark:text-darkTextSecondary">
-                              <input type="checkbox" checked={selectedIds.includes(p.id)} disabled={!selectedIds.includes(p.id) && selectedIds.length >= 2} onChange={() => handleToggleCompare(p.id)} className="h-4 w-4 accent-primary" />
+                              <input type="checkbox" checked={selectedIds.includes(p.id)} disabled={!selectedIds.includes(p.id) && selectedIds.length >= 2} onChange={() => handleToggleCompare(p.id)} className="h-4 w-4 accent-accentFrom dark:accent-darkAccentFrom" />
                               Compare
                             </label>
                           )}
@@ -605,10 +567,10 @@ export default function Planning() {
                       </div>
 
                       <div className="flex flex-col items-end gap-2 ml-4">
-                        <button onClick={() => setDetailId(p.id)} className="text-xs text-textPrimary underline dark:text-darkTextPrimary">Ver detalles</button>
+                        <button type="button" onClick={() => setDetailId(p.id)} className="rounded text-xs text-textPrimary underline transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Ver detalles</button>
                         <div className="flex gap-2">
-                          <button onClick={() => duplicateProposal(p)} className="inline-flex items-center gap-1 text-xs text-textPrimary dark:text-darkTextPrimary"><Copy className="h-3 w-3" /> Duplicar</button>
-                          <button onClick={() => { const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `propuesta-${p.solutionName.replace(/[^a-z0-9]+/gi, '-')}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); }} className="text-xs text-textPrimary dark:text-darkTextPrimary">Exportar</button>
+                          <button type="button" onClick={() => duplicateProposal(p)} className="inline-flex items-center gap-1 rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30"><Copy className="h-3 w-3" /> Duplicar</button>
+                          <button type="button" onClick={() => { const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `propuesta-${p.solutionName.replace(/[^a-z0-9]+/gi, '-')}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); }} className="rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Exportar</button>
                           <button onClick={() => handleRemove(p.id)} className="text-xs text-danger dark:text-darkDanger">Eliminar</button>
                         </div>
                       </div>
@@ -661,7 +623,7 @@ export default function Planning() {
                   </div>
                 </div>
                 <div>
-                  <button onClick={() => setDetailId(null)} className="text-xs">Cerrar</button>
+                  <button type="button" onClick={() => setDetailId(null)} className="rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Cerrar</button>
                 </div>
               </div>
 
@@ -680,13 +642,13 @@ export default function Planning() {
       </div>
 
       {suggestionsOpen && (
-        <section ref={suggestionsRef} className="mt-6 scroll-mt-24 rounded-2xl border border-primary/30 bg-primary/5 p-4 dark:border-darkPrimary/40 dark:bg-darkCard">
+        <section ref={suggestionsRef} className="mt-6 scroll-mt-24 rounded-2xl border border-accentFrom/30 bg-gradient-to-r from-accentFrom/5 to-accentTo/5 p-4 dark:border-darkAccentFrom/40 dark:from-darkAccentFrom/10 dark:to-darkAccentTo/10">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold flex items-center gap-2"><Lightbulb className="h-4 w-4 text-primary dark:text-darkPrimary" /> Arquitecturas sugeridas <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">Simulación</span></h3>
+              <h3 className="font-semibold flex items-center gap-2"><Lightbulb className="h-4 w-4 text-accentFrom dark:text-darkAccentFrom" /> Arquitecturas sugeridas <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">Simulación</span></h3>
               <p className="mt-1 text-xs text-textSecondary dark:text-darkTextSecondary">Configuración actual: {form.appType || 'sin tipo'} · {form.estimatedUsers || 0} usuarios · disponibilidad {availabilitySla(form.availabilityLevel)}. Aplica una a tu formulario o regístrala.</p>
             </div>
-            <button onClick={() => setSuggestionsOpen(false)} className="text-xs text-textPrimary dark:text-darkTextPrimary">Cerrar</button>
+            <button type="button" onClick={() => setSuggestionsOpen(false)} className="rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Cerrar</button>
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -699,8 +661,8 @@ export default function Planning() {
                 <p className="mt-2 text-xs text-textSecondary dark:text-darkTextSecondary">{sugg.rationale}</p>
                 <p className="mt-2 font-bold">{currency.format(sugg.estimatedCost)} / mes</p>
                 <div className="mt-auto pt-3 flex flex-wrap gap-2">
-                  <button onClick={() => applySuggestion(sugg)} className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1 text-xs font-semibold text-white"><Check className="h-3 w-3" /> Usar en el formulario</button>
-                  <button onClick={() => setForm((prev) => ({ ...prev, solutionName: prev.solutionName || `${sugg.name} · ${form.appType || 'Arquitectura'}` }))} className="text-xs text-textPrimary dark:text-darkTextPrimary">Preparar nombre</button>
+                  <button onClick={() => applySuggestion(sugg)} className="inline-flex items-center gap-1 rounded-md bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1 text-xs font-semibold text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40"><Check className="h-3 w-3" /> Usar en el formulario</button>
+                  <button type="button" onClick={() => setForm((prev) => ({ ...prev, solutionName: prev.solutionName || `${sugg.name} · ${form.appType || 'Arquitectura'}` }))} className="rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Preparar nombre</button>
                 </div>
               </div>
             ))}

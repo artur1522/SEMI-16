@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Activity,
   AlertCircle,
@@ -14,6 +15,7 @@ import {
   Network,
   Server,
   ShieldCheck,
+  Settings,
   type LucideIcon
 } from 'lucide-react'
 import CostDistribution from '../components/CostDistribution'
@@ -27,6 +29,9 @@ import StatusBadge from '../components/StatusBadge'
 import SecurityCard from '../components/SecurityCard'
 import TopCostServices from '../components/TopCostServices'
 import UptimeCard from '../components/UptimeCard'
+import NetworkFlowDiagram from '../components/NetworkFlowDiagram'
+import { suggestArchitectures } from '../data/architecture'
+import { awsServices } from '../data/awsServices'
 import { deriveMetrics, useCloudStore } from '../store/cloudStore'
 import { usePreferences, useFormatters } from '../hooks/usePreferences'
 import { regionReferences } from '../data/regions'
@@ -94,7 +99,15 @@ function computeUptimePercent(servers: CloudServer[]): number {
 }
 
 export default function Dashboard() {
-  const { servers, events, history } = useCloudStore()
+  const {
+    servers,
+    events,
+    history,
+    proposals,
+    monthlyBudgetLimit,
+    securityScore,
+    networkSimulationActive
+  } = useCloudStore()
   const { preferences, updatePreferences } = usePreferences()
   const { formatCurrency } = useFormatters()
 
@@ -203,6 +216,86 @@ export default function Dashboard() {
       )
     : events
 
+  const sortedProposals = useMemo(
+    () =>
+      [...proposals].sort(
+        (first, second) =>
+          new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime()
+      ),
+    [proposals]
+  )
+  const approvedProposal = sortedProposals.find((proposal) => proposal.status === 'aprobada')
+  const activeProposal = approvedProposal ?? sortedProposals[0]
+  const architectureSuggestion = activeProposal
+    ? suggestArchitectures(
+        activeProposal.appType,
+        activeProposal.estimatedUsers,
+        activeProposal.availabilityLevel
+      )[0]
+    : undefined
+  const activeServices = awsServices.filter((service) => service.status === 'active').length
+  const costUsagePercent =
+    monthlyBudgetLimit > 0
+      ? Math.min(100, Math.round((scoped.totalMonthly / monthlyBudgetLimit) * 100))
+      : 0
+  const moduleCards: {
+    label: string
+    detail: string
+    value: string
+    to: string
+    icon: LucideIcon
+  }[] = [
+    {
+      label: 'Planificación',
+      detail: 'propuestas',
+      value: String(proposals.length),
+      to: '/planning',
+      icon: LayoutGrid
+    },
+    {
+      label: 'Costos',
+      detail: 'del presupuesto',
+      value: `${costUsagePercent}%`,
+      to: '/costs',
+      icon: DollarSign
+    },
+    {
+      label: 'Infraestructura',
+      detail: 'regiones operativas',
+      value: `${operationalRegions}/${displayedRegions.length}`,
+      to: '/infrastructure',
+      icon: Server
+    },
+    {
+      label: 'Seguridad',
+      detail: 'controles completados',
+      value: `${securityScore}%`,
+      to: '/security',
+      icon: ShieldCheck
+    },
+    {
+      label: 'Red',
+      detail: 'simulación de tráfico',
+      value: networkSimulationActive ? 'Activa' : 'Inactiva',
+      to: '/network',
+      icon: Network
+    },
+    {
+      label: 'Servicios',
+      detail: 'servicios activos',
+      value: String(activeServices),
+      to: '/services',
+      icon: Boxes
+    },
+    {
+      label: 'Configuración',
+      detail: 'moneda activa',
+      value: preferences.currency,
+      to: '/config',
+      icon: Settings
+    }
+  ]
+
   return (
     <div className={compact ? 'space-y-5' : 'space-y-8'}>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -212,7 +305,7 @@ export default function Dashboard() {
               Dashboard
             </h1>
             {selectedRegion && (
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
+               <span className="rounded-full border border-transparent bg-gradient-to-r from-accentFrom/10 to-accentTo/10 px-2 py-0.5 text-xs font-semibold text-accentFrom shadow-[0_0_10px_rgba(124,58,237,0.12)] dark:from-darkAccentFrom/20 dark:to-darkAccentTo/20 dark:text-darkAccentFrom dark:shadow-[0_0_10px_rgba(139,92,246,0.18)]">
                 {selectedRegion.name}
               </span>
             )}
@@ -227,7 +320,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => updatePreferences('density', compact ? 'comodo' : 'compacto')}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-textPrimary transition-colors hover:bg-primary/10 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:bg-darkPrimary/10 dark:hover:text-darkPrimary"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-textPrimary transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/40"
             title="Alternar vista compacta / detallada"
           >
             {compact ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
@@ -362,11 +455,11 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => setTrafficLoad((previous) => !previous)}
-                className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-                  trafficLoad
-                    ? 'border-warning/40 bg-warning/10 text-warning hover:bg-warning/20 dark:border-darkWarning/40 dark:bg-darkWarning/10 dark:text-darkWarning dark:hover:bg-darkWarning/20'
-                    : 'border-border bg-background text-textPrimary hover:bg-primary/10 hover:text-primary dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:bg-darkPrimary/10 dark:hover:text-darkPrimary'
-                }`}
+                 className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
+                   trafficLoad
+                     ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_14px_rgba(124,58,237,0.2)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40'
+                     : 'border-border bg-background text-textPrimary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/40'
+                 }`}
               >
                 <Gauge className="h-4 w-4" />
                 {trafficLoad ? 'Detener simulación' : 'Simular carga de tráfico'}
@@ -420,6 +513,124 @@ export default function Dashboard() {
           </div>
         </section>
       )}
+
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
+              Arquitectura de la solución
+            </h2>
+            <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
+              Sigue la propuesta activa y salta directamente a cada módulo de la plataforma.
+            </p>
+          </div>
+          <Link
+            to="/planning"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-textPrimary shadow-sm transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom"
+          >
+            Ver propuestas
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <article className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-darkBorder dark:bg-darkCard">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
+                  Propuesta activa
+                </p>
+                <h3 className="mt-1 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
+                  {activeProposal?.solutionName ?? 'Sin propuesta disponible'}
+                </h3>
+              </div>
+              {activeProposal && (
+                <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success dark:bg-darkSuccess/10 dark:text-darkSuccess">
+                  {activeProposal.status === 'aprobada' ? 'Aprobada' : 'Más reciente'}
+                </span>
+              )}
+            </div>
+
+            {activeProposal ? (
+              <>
+                {!approvedProposal && (
+                  <p className="mt-3 rounded-xl bg-warning/10 px-3 py-2 text-xs font-medium text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
+                    Sin propuestas aprobadas aún, mostrando la más reciente
+                  </p>
+                )}
+                <div className="mt-4 flex items-center justify-between gap-3 border-b border-border pb-3 dark:border-darkBorder">
+                  <span className="text-xs text-textSecondary dark:text-darkTextSecondary">
+                    Arquitectura sugerida
+                  </span>
+                  <strong className="text-right text-sm text-textPrimary dark:text-darkTextPrimary">
+                    {architectureSuggestion?.name ?? activeProposal.appType}
+                  </strong>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-textSecondary dark:text-darkTextSecondary">
+                  {architectureSuggestion?.rationale ?? activeProposal.description}
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(architectureSuggestion?.stack ?? activeProposal.selectedServices).map((service) => (
+                    <span
+                      key={service}
+                      className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary"
+                    >
+                      {service}
+                    </span>
+                  ))}
+                </div>
+                <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-background px-3 py-3 dark:bg-darkBackground">
+                  <span className="text-xs text-textSecondary dark:text-darkTextSecondary">
+                    Estimación mensual
+                  </span>
+                  <strong className="text-sm text-primary dark:text-darkPrimary">
+                    {formatCurrency(architectureSuggestion?.estimatedCost ?? 0)}
+                  </strong>
+                </div>
+              </>
+            ) : (
+              <p className="mt-4 text-sm text-textSecondary dark:text-darkTextSecondary">
+                Crea una propuesta desde Planificación para ver aquí su arquitectura recomendada.
+              </p>
+            )}
+          </article>
+
+          <div className="min-w-0">
+            <NetworkFlowDiagram compact />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
+            Módulos de la plataforma
+          </h3>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {moduleCards.map(({ label, detail, value, to, icon: Icon }) => (
+              <Link
+                key={label}
+                to={to}
+                 className="group flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-border bg-white p-3 shadow-sm transition-all hover:border-accentFrom/50 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkBorder dark:bg-darkCard dark:hover:border-darkAccentFrom/50 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15"
+              >
+                <div className="flex min-w-0 items-center gap-2.5">
+                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accentFrom/10 text-accentFrom dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
+                      {label}
+                    </span>
+                    <span className="block truncate text-[11px] text-textSecondary dark:text-darkTextSecondary">
+                      {detail}
+                    </span>
+                  </span>
+                </div>
+                 <span className="shrink-0 text-right text-sm font-bold text-accentFrom dark:text-darkAccentFrom">
+                  {value}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

@@ -139,7 +139,7 @@ export default function Services() {
               value={sortBy}
               onChange={(event) => setSortBy(event.target.value as SortKey)}
               aria-label="Ordenar servicios"
-              className="w-full appearance-none rounded-xl border border-border bg-white py-2 pl-9 pr-8 text-sm text-textPrimary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:focus:border-darkPrimary dark:focus:ring-darkPrimary/20 sm:w-44"
+              className="w-full appearance-none rounded-xl border border-border bg-white py-2 pl-9 pr-8 text-sm text-textPrimary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20 sm:w-44"
             >
               {(Object.keys(sortLabels) as SortKey[]).map((key) => (
                 <option key={key} value={key}>
@@ -157,7 +157,7 @@ export default function Services() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar por nombre o descripción..."
-              className="w-full rounded-xl border border-border bg-white py-2 pl-9 pr-8 text-sm text-textPrimary placeholder:text-textSecondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkPrimary dark:focus:ring-darkPrimary/20 sm:w-64"
+              className="w-full rounded-xl border border-border bg-white py-2 pl-9 pr-8 text-sm text-textPrimary placeholder:text-textSecondary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20 sm:w-64"
             />
             {query && (
               <button
@@ -177,11 +177,11 @@ export default function Services() {
         <button
           type="button"
           onClick={() => setCategory('all')}
-          className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-            category === 'all'
-              ? 'border-primary bg-primary text-white'
-              : 'border-border bg-white text-textSecondary hover:bg-background hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:bg-darkBackground dark:hover:text-darkTextPrimary'
-          }`}
+           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
+             category === 'all'
+               ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
+               : 'border-border bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary dark:focus:ring-darkAccentFrom/40'
+           }`}
         >
           Todos
         </button>
@@ -190,11 +190,11 @@ export default function Services() {
             key={key}
             type="button"
             onClick={() => setCategory(key)}
-            className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-              category === key
-                ? 'border-primary bg-primary text-white'
-                : 'border-border bg-white text-textSecondary hover:bg-background hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:bg-darkBackground dark:hover:text-darkTextPrimary'
-            }`}
+             className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
+               category === key
+                 ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
+                 : 'border-border bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary dark:focus:ring-darkAccentFrom/40'
+             }`}
           >
             {categoryLabels[key] ?? key}
           </button>

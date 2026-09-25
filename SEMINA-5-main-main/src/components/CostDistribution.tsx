@@ -3,11 +3,13 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 
 type Item = { name: string; value: number; color: string }
 
-const currency = new Intl.NumberFormat('es-ES', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0
-})
+function formatMoney(amount: number): string {
+  return `${new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: true
+  }).format(amount)} USD`
+}
 
 export default function CostDistribution({ data }: { data: Item[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
@@ -29,7 +31,7 @@ export default function CostDistribution({ data }: { data: Item[] }) {
         <div className="text-right">
           <p className="text-xs text-textSecondary dark:text-darkTextSecondary">Gasto Total Proyectado</p>
           <p className="mt-1 text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-            {currency.format(total)} <span className="text-sm font-medium text-textSecondary">/ mes</span>
+            {formatMoney(total)}
           </p>
         </div>
       </div>
@@ -63,7 +65,7 @@ export default function CostDistribution({ data }: { data: Item[] }) {
 
             <div className="pointer-events-none absolute left-1/2 top-1/2 w-44 -translate-x-1/2 -translate-y-1/2 text-center">
               <p className="text-sm text-textSecondary dark:text-darkTextSecondary">{active ? active.name : 'Total'}</p>
-              <p className="mt-1 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">{active ? currency.format(active.value) : currency.format(total)}</p>
+              <p className="mt-1 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">{active ? formatMoney(active.value) : formatMoney(total)}</p>
               <p className="mt-0.5 text-xs text-textSecondary dark:text-darkTextSecondary">{active ? `${Math.round((active.value / total) * 100)}%` : '100%'}</p>
             </div>
           </div>
@@ -80,13 +82,17 @@ export default function CostDistribution({ data }: { data: Item[] }) {
                   type="button"
                   onMouseEnter={() => setActiveIndex(idx)}
                   onMouseLeave={() => setActiveIndex(null)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-white p-3 text-left transition-shadow hover:shadow-sm dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary ${isActive ? 'shadow-md' : ''}`}
+                   className={`flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-white p-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary ${
+                     isActive
+                       ? 'border-transparent bg-gradient-to-r from-accentFrom/10 to-accentTo/10 shadow-[0_0_14px_rgba(124,58,237,0.12)] dark:from-darkAccentFrom/15 dark:to-darkAccentTo/15 dark:shadow-[0_0_14px_rgba(139,92,246,0.18)] dark:focus:ring-darkAccentFrom/30'
+                       : 'hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15'
+                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <span style={{ background: item.color }} className="h-3 w-3 rounded-full" />
                     <div>
                       <p className="text-sm font-medium text-textPrimary dark:text-darkTextPrimary">{item.name}</p>
-                      <p className="mt-0.5 text-xs text-textSecondary dark:text-darkTextSecondary">{pct}% • {currency.format(item.value)}</p>
+                      <p className="mt-0.5 text-xs text-textSecondary dark:text-darkTextSecondary">{pct}% • {formatMoney(item.value)}</p>
                     </div>
                   </div>
 

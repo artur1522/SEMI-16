@@ -1,4 +1,5 @@
 import { TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
+import { useTheme } from '../hooks/useTheme'
 
 interface StatCardProps {
   title: string
@@ -8,10 +9,19 @@ interface StatCardProps {
 }
 
 export default function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const isPositiveTrend = trend?.startsWith('+')
 
   return (
-    <div className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-darkBorder dark:bg-darkCard">
+    <div
+      className="group flex items-center justify-between gap-4 rounded-2xl border border-border bg-white p-5 shadow-sm transition-all duration-200 hover:border-accentFrom/40 hover:shadow-[0_0_0_1px_rgba(124,58,237,0.18),0_12px_24px_rgba(124,58,237,0.08)] dark:border-darkBorder dark:bg-darkCard dark:hover:border-darkAccentFrom/50 dark:hover:shadow-[0_0_0_1px_rgba(139,92,246,0.2),0_12px_24px_rgba(139,92,246,0.12)]"
+      style={{
+        backgroundImage: isDark
+          ? 'linear-gradient(135deg, rgba(139,92,246,0.06), rgba(236,72,153,0.04), rgba(26,20,51,0.96))'
+          : 'linear-gradient(135deg, rgba(124,58,237,0.05), rgba(236,72,153,0.04), rgba(255,255,255,0.98))'
+      }}
+    >
       <div className="min-w-0">
         <p className="truncate text-sm font-medium text-textSecondary dark:text-darkTextSecondary">
           {title}
@@ -36,7 +46,7 @@ export default function StatCard({ title, value, icon: Icon, trend }: StatCardPr
           </p>
         )}
       </div>
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/10 dark:bg-darkPrimary/10 dark:text-darkPrimary dark:ring-darkPrimary/10">
         <Icon className="h-6 w-6" />
       </div>
     </div>

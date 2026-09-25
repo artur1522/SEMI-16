@@ -134,14 +134,14 @@ export default function RegionMap({ regions }: RegionMapProps) {
         <button
           type="button"
           onClick={handleReset}
-          className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-semibold text-textPrimary transition-colors hover:bg-primary/10 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/40 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:bg-darkPrimary/10 dark:hover:text-darkPrimary"
+          className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-semibold text-textPrimary transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/40"
         >
           <RotateCcw className="h-4 w-4" />
           Restablecer vista
         </button>
       </div>
 
-      <div className="relative mt-4 h-56 border-t border-border dark:border-darkBorder sm:h-72 md:h-80 lg:h-96 xl:h-[28rem]">
+      <div className="relative mt-4 h-56 border-t border-border pb-6 dark:border-darkBorder sm:h-72 sm:pb-8 md:h-80 md:pb-10 lg:h-96 xl:h-[28rem]">
         <ComposableMap projection="geoEqualEarth" width={1000} height={480} className="h-full w-full">
           <ZoomableGroup
             center={view.center}

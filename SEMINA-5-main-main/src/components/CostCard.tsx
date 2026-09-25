@@ -17,6 +17,15 @@ const environmentLabels: Record<CostEnvironment, string> = {
   production: 'Producción'
 }
 
+const serviceFullNames: Record<string, string> = {
+  EC2: 'Elastic Compute Cloud',
+  S3: 'Simple Storage Service',
+  RDS: 'Relational Database Service',
+  CloudFront: 'Content Delivery Network',
+  'Route 53': 'Domain Name System',
+  'VPC (NAT Gateway)': 'Virtual Private Cloud / NAT Gateway'
+}
+
 export default function CostCard({ item }: CostCardProps) {
   const stats = [
     { label: 'Cantidad', value: `${item.quantity}`, icon: Boxes },
@@ -28,12 +37,17 @@ export default function CostCard({ item }: CostCardProps) {
   return (
     <article className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            {item.service}
-          </h3>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
+              {item.service}
+            </h3>
+          </div>
+          <p className="mt-1 text-[11px] font-medium text-textSecondary dark:text-darkTextSecondary">
+            {serviceFullNames[item.service] ?? 'Servicio de infraestructura en la nube'}
+          </p>
         </div>
-        <span className="text-xs text-textSecondary dark:text-darkTextSecondary">
+        <span className="shrink-0 text-xs text-textSecondary dark:text-darkTextSecondary">
           {formatter.format(item.unitCost)}/unidad
         </span>
       </div>

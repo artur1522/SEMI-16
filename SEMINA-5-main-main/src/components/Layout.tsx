@@ -39,14 +39,14 @@ export default function Layout() {
         : 'p-4 sm:p-6 lg:p-8'
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background dark:bg-darkBackground">
+    <div className="flex h-screen overflow-hidden bg-transparent">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex h-screen min-w-0 flex-1 flex-col overflow-y-auto md:ml-64">
-        <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-border bg-background/80 px-4 backdrop-blur dark:border-darkBorder dark:bg-darkBackground/80 sm:px-6">
+        <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-white/40 bg-white/60 px-4 backdrop-blur-xl dark:border-darkBorder dark:bg-darkBackground/65 sm:px-6">
           <button
             type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-textSecondary transition-colors hover:bg-white hover:text-textPrimary dark:text-darkTextSecondary dark:hover:bg-darkCard dark:hover:text-darkTextPrimary md:hidden"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-textSecondary transition-all hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextSecondary dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30 md:hidden"
             onClick={() => setSidebarOpen(true)}
             aria-label="Abrir menú"
           >
@@ -57,7 +57,9 @@ export default function Layout() {
         </div>
 
         <main className={`flex-1 ${mainPadding}`}>
-          <Outlet />
+          <div className="mx-auto max-w-[1600px]">
+            <Outlet />
+          </div>
         </main>
       </div>
 

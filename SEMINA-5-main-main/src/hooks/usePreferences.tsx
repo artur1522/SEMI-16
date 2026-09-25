@@ -60,13 +60,28 @@ const currencyRates: Record<Currency, number> = {
   EUR: 0.92
 }
 
-export function formatCurrency(amountInUsd: number, currency: Currency): string {
+export function formatMoney(amountInUsd: number, currency: Currency = 'USD'): string {
   const converted = amountInUsd * currencyRates[currency]
-  const formatted = new Intl.NumberFormat('es', {
+
+  if (currency === 'USD') {
+    return `${new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true
+    }).format(converted)} USD`
+  }
+
+  const formatted = new Intl.NumberFormat('es-ES', {
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-    minimumFractionDigits: amountInUsd < 100 ? 2 : 0
+    useGrouping: true
   }).format(converted)
+
   return `${currencySymbols[currency]} ${formatted}`
+}
+
+export function formatCurrency(amountInUsd: number, currency: Currency): string {
+  return formatMoney(amountInUsd, currency)
 }
 
 export function formatTime(hours: number, unit: TimeUnit): string {

@@ -11,6 +11,7 @@ import type {
   ServiceStatus
 } from '../types/cloud'
 import { regionReferences } from '../data/regions'
+import { getServerMeaning } from '../data/serverNames'
 
 const UNIT_COSTS: Record<string, number> = {
   ec2: 120,
@@ -44,6 +45,19 @@ const CATEGORY_COLORS: Record<string, string> = {
 const HOURS_PER_MONTH = 730
 
 const PROPOSALS_STORAGE_KEY = 'cloudops-proposals'
+const MONTHLY_BUDGET_LIMIT = 4000
+const SECURITY_CONTROL_TOTAL = 8
+
+const initialSecurityControls: Record<string, boolean> = {
+  mfa: true,
+  keys: false,
+  cifrado: true,
+  tls: true,
+  parches: false,
+  logs: true,
+  sg: true,
+  backup: false
+}
 
 const initialProposals: CloudProposal[] = [
   {
@@ -176,11 +190,17 @@ interface CloudStoreValue {
   servicesHistory: number[]
   monthlyHistory: number[]
   proposals: CloudProposal[]
+  monthlyBudgetLimit: number
+  securityScore: number
+  securityControls: Record<string, boolean>
+  networkSimulationActive: boolean
   addServer: (input: AddServerInput) => CloudServer
   removeServer: (id: string) => void
   addProposal: (proposal: CloudProposal) => void
   removeProposal: (id: string) => void
   updateProposalStatus: (id: string, status: CloudProposal['status']) => void
+  setSecurityControl: (id: string, completed: boolean) => void
+  setNetworkSimulationActive: (active: boolean) => void
 }
 
 const CloudContext = createContext<CloudStoreValue | null>(null)
@@ -191,6 +211,10 @@ const envPriority: CostEnvironment[] = ['production', 'staging', 'dev']
 
 function regionName(id: string) {
   return regionReferences.find((region) => region.id === id)?.name ?? id
+}
+
+function serverLabel(server: CloudServer): string {
+  return `${server.name} (${getServerMeaning(server)})`
 }
 
 function buildRegions(servers: CloudServer[]): Region[] {
@@ -331,14 +355,14 @@ function deriveAlertEvents(servers: CloudServer[]): CloudLog[] {
         id: `alert-${server.id}`,
         timestamp: new Date(server.addedAt).toISOString(),
         severity: 'critical',
-        message: `${server.name} está inactivo en ${regionName(server.regionId)}.`
+        message: `${serverLabel(server)} está inactivo en ${regionName(server.regionId)}.`
       })
     } else if (server.status === 'warning') {
       alerts.push({
         id: `alert-${server.id}`,
         timestamp: new Date(server.addedAt).toISOString(),
         severity: 'warning',
-        message: `${server.name} presenta advertencias en ${regionName(server.regionId)}.`
+        message: `${serverLabel(server)} presenta advertencias en ${regionName(server.regionId)}.`
       })
     }
   }
@@ -366,7 +390,7 @@ function deriveAlertEvents(servers: CloudServer[]): CloudLog[] {
         id: `alert-single-${id}`,
         timestamp: new Date(active[0].addedAt).toISOString(),
         severity: 'warning',
-        message: `${regionName(id)}: solo queda ${active[0].name} activo, punto único de falla.`
+        message: `${regionName(id)}: solo queda ${serverLabel(active[0])} activo, punto único de falla.`
       })
     }
     if (rds.length === 1) {
@@ -382,7 +406,7 @@ function deriveAlertEvents(servers: CloudServer[]): CloudLog[] {
         id: `alert-ec2-${id}`,
         timestamp: new Date(ec2Prod[0].addedAt).toISOString(),
         severity: 'warning',
-        message: `Producción en ${regionName(id)} corre en una sola instancia EC2 (${ec2Prod[0].name}).`
+        message: `Producción en ${regionName(id)} corre en una sola instancia EC2: ${serverLabel(ec2Prod[0])}.`
       })
     }
     if (hasEgress && !hasCdn) {
@@ -577,6 +601,10 @@ export function CloudProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<HistoryPoint[]>(initial.history)
   const [log, setLog] = useState<CloudLog[]>(initial.log)
   const [proposals, setProposals] = useState<CloudProposal[]>(loadProposals)
+  const [securityControls, setSecurityControls] = useState<Record<string, boolean>>(
+    () => ({ ...initialSecurityControls })
+  )
+  const [networkSimulationActive, setNetworkSimulationActive] = useState(false)
 
   useEffect(() => {
     window.localStorage.setItem(PROPOSALS_STORAGE_KEY, JSON.stringify(proposals))
@@ -607,7 +635,7 @@ export function CloudProvider({ children }: { children: ReactNode }) {
             id: `log-${Date.now()}`,
             timestamp: new Date().toISOString(),
             severity: 'info' as const,
-            message: `${server.name} agregado en ${regionName(input.regionId)}.`
+            message: `${serverLabel(server)} agregado en ${regionName(input.regionId)}.`
           },
           ...previous
         ].slice(0, 50)
@@ -630,7 +658,7 @@ export function CloudProvider({ children }: { children: ReactNode }) {
             id: `log-${Date.now()}`,
             timestamp: new Date().toISOString(),
             severity: 'info' as const,
-            message: `${server.name} eliminado de ${regionName(server.regionId)}.`
+            message: `${serverLabel(server)} eliminado de ${regionName(server.regionId)}.`
           },
           ...previous
         ].slice(0, 50)
@@ -651,6 +679,10 @@ export function CloudProvider({ children }: { children: ReactNode }) {
     setProposals((previous) =>
       previous.map((proposal) => (proposal.id === id ? { ...proposal, status } : proposal))
     )
+  }, [])
+
+  const setSecurityControl = useCallback((id: string, completed: boolean) => {
+    setSecurityControls((previous) => ({ ...previous, [id]: completed }))
   }, [])
 
   const value = useMemo<CloudStoreValue>(() => {
@@ -678,13 +710,34 @@ export function CloudProvider({ children }: { children: ReactNode }) {
       servicesHistory: history.map((point) => point.services),
       monthlyHistory: history.map((point) => point.monthlyCost),
       proposals,
+      monthlyBudgetLimit: MONTHLY_BUDGET_LIMIT,
+      securityScore: Math.round(
+        (Object.values(securityControls).filter(Boolean).length / SECURITY_CONTROL_TOTAL) * 100
+      ),
+      securityControls,
+      networkSimulationActive,
       addServer,
       removeServer,
       addProposal,
       removeProposal,
-      updateProposalStatus
+      updateProposalStatus,
+      setSecurityControl,
+      setNetworkSimulationActive
     }
-  }, [servers, log, history, proposals, addServer, removeServer, addProposal, removeProposal, updateProposalStatus])
+  }, [
+    servers,
+    log,
+    history,
+    proposals,
+    securityControls,
+    networkSimulationActive,
+    addServer,
+    removeServer,
+    addProposal,
+    removeProposal,
+    updateProposalStatus,
+    setSecurityControl
+  ])
 
   return <CloudContext.Provider value={value}>{children}</CloudContext.Provider>
 }

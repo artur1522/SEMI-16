@@ -5,7 +5,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: '#F8FAFC',
+        background: '#FAF9FF',
         sidebar: '#0F172A',
         primary: '#2563EB',
         success: '#16A34A',
@@ -14,15 +14,19 @@ module.exports = {
         textPrimary: '#1E293B',
         textSecondary: '#64748B',
         border: '#E2E8F0',
-        darkBackground: '#0B1220',
-        darkCard: '#111827',
-        darkBorder: '#1E293B',
+        accentFrom: '#7C3AED',
+        accentTo: '#EC4899',
+        darkBackground: '#0F0B24',
+        darkCard: '#1A1433',
+        darkBorder: '#31214F',
         darkTextPrimary: '#E5E7EB',
-        darkTextSecondary: '#94A3B8',
+        darkTextSecondary: '#A8B3CF',
         darkPrimary: '#3B82F6',
         darkSuccess: '#22C55E',
         darkWarning: '#FBBF24',
-        darkDanger: '#F87171'
+        darkDanger: '#F87171',
+        darkAccentFrom: '#8B5CF6',
+        darkAccentTo: '#EC4899'
       }
     }
   },

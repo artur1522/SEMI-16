@@ -22,11 +22,11 @@ export default function RegionCard({ region, failover, compliance, replication }
         : 'text-danger dark:text-darkDanger'
 
   return (
-    <article className="flex flex-col rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
+    <article className={`glass-card flex flex-col rounded-3xl p-6 transition-all duration-300 ${expanded ? 'border-violet-300/60 shadow-[0_16px_45px_rgba(124,58,237,0.15)] dark:border-violet-400/35 dark:shadow-[0_16px_45px_rgba(139,92,246,0.18)]' : ''}`}>
       <button
         type="button"
         onClick={() => setExpanded((previous) => !previous)}
-        className="flex w-full items-start justify-between gap-3 text-left focus:outline-none"
+         className="flex w-full items-start justify-between gap-3 rounded-xl p-2 text-left transition-all hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/30"
         aria-expanded={expanded}
       >
         <div>
@@ -47,9 +47,11 @@ export default function RegionCard({ region, failover, compliance, replication }
         <div className="flex shrink-0 flex-col items-end gap-2">
           <StatusBadge status={region.status} />
           <ChevronDown
-            className={`h-5 w-5 text-textSecondary transition-transform duration-300 dark:text-darkTextSecondary ${
-              expanded ? 'rotate-180' : ''
-            }`}
+             className={`h-5 w-5 transition-transform duration-300 ${
+               expanded
+                 ? 'rotate-180 text-accentFrom dark:text-darkAccentFrom'
+                 : 'text-textSecondary dark:text-darkTextSecondary'
+             }`}
           />
         </div>
       </button>

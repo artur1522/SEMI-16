@@ -16,6 +16,8 @@ import {
   XCircle,
   type LucideIcon
 } from 'lucide-react'
+import NetworkFlowDiagram from '../components/NetworkFlowDiagram'
+import { useCloudStore } from '../store/cloudStore'
 
 interface FlowNodeProps {
   icon: LucideIcon
@@ -225,7 +227,10 @@ const flowSegments: FlowSegment[] = [
 ]
 
 export default function Network() {
-  const [cloudFrontDown, setCloudFrontDown] = useState(false)
+  const {
+    networkSimulationActive: cloudFrontDown,
+    setNetworkSimulationActive: setCloudFrontDown
+  } = useCloudStore()
   const [detailedView, setDetailedView] = useState(false)
   const [showLabels, setShowLabels] = useState(true)
   const [showTrafficLogs, setShowTrafficLogs] = useState(false)
@@ -253,10 +258,10 @@ export default function Network() {
               role="tab"
               aria-selected={!detailedView}
               onClick={() => setDetailedView(false)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 ${
                 !detailedView
-                  ? 'bg-primary text-white dark:bg-darkPrimary'
-                  : 'text-textSecondary hover:text-textPrimary dark:text-darkTextSecondary dark:hover:text-darkTextPrimary'
+                  ? 'bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)]'
+                  : 'text-textSecondary hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:text-darkTextSecondary dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary'
               }`}
             >
               Vista simple
@@ -266,10 +271,10 @@ export default function Network() {
               role="tab"
               aria-selected={detailedView}
               onClick={() => setDetailedView(true)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 ${
                 detailedView
-                  ? 'bg-primary text-white dark:bg-darkPrimary'
-                  : 'text-textSecondary hover:text-textPrimary dark:text-darkTextSecondary dark:hover:text-darkTextPrimary'
+                  ? 'bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)]'
+                  : 'text-textSecondary hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:text-darkTextSecondary dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary'
               }`}
             >
               Vista detallada
@@ -278,7 +283,7 @@ export default function Network() {
           <button
             type="button"
             onClick={() => setShowLabels((previous) => !previous)}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-textPrimary shadow-sm transition-colors hover:bg-background dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:bg-darkBackground"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-textPrimary shadow-sm transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/30"
           >
             {showLabels ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
             {showLabels ? 'Ocultar etiquetas' : 'Mostrar etiquetas'}
@@ -510,7 +515,7 @@ export default function Network() {
           <button
             type="button"
             onClick={() => setShowTrafficLogs((previous) => !previous)}
-            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:bg-darkPrimary"
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40"
           >
             <Tags className="h-4 w-4" />
             {showTrafficLogs ? 'Ocultar logs de tráfico' : 'Ver logs de tráfico'}

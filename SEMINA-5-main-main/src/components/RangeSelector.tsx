@@ -19,10 +19,10 @@ export default function RangeSelector({ value, onChange }: RangeSelectorProps) {
           key={option.key}
           type="button"
           onClick={() => onChange(option.key)}
-          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:focus:ring-darkAccentFrom/40 ${
             value === option.key
-              ? 'bg-primary text-white dark:bg-darkPrimary'
-              : 'text-textSecondary hover:text-textPrimary dark:text-darkTextSecondary dark:hover:text-darkTextPrimary'
+              ? 'bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
+              : 'text-textSecondary hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:text-darkTextSecondary dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary'
           }`}
         >
           {option.label}

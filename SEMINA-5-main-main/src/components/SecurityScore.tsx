@@ -35,6 +35,9 @@ export default function SecurityScore({ score, threats, mfaCoverage, patches }: 
           ? '#22C55E'
           : '#16A34A'
 
+  const gradientId = isDark ? 'security-score-gradient-dark' : 'security-score-gradient-light'
+  const accentFrom = isDark ? '#8B5CF6' : '#7C3AED'
+  const accentTo = '#EC4899'
   const track = isDark ? '#1E293B' : '#E2E8F0'
 
   const data = [
@@ -49,6 +52,12 @@ export default function SecurityScore({ score, threats, mfaCoverage, patches }: 
           <div className="relative h-36 w-36 shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
+                <defs>
+                  <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={accentFrom} />
+                    <stop offset="100%" stopColor={accentTo} />
+                  </linearGradient>
+                </defs>
                 <Pie
                   data={data}
                   dataKey="value"
@@ -62,7 +71,7 @@ export default function SecurityScore({ score, threats, mfaCoverage, patches }: 
                   endAngle={-270}
                   stroke="none"
                 >
-                  <Cell fill={accent} />
+                  <Cell fill={`url(#${gradientId})`} />
                   <Cell fill={track} />
                 </Pie>
               </PieChart>

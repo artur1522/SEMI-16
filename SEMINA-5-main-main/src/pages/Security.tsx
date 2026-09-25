@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import SecurityScore from '../components/SecurityScore'
 import { usePreferences } from '../hooks/usePreferences'
+import { useCloudStore } from '../store/cloudStore'
 
 interface CustomerControl {
   id: string
@@ -314,14 +315,13 @@ const statusToneStyles: Record<string, string> = {
 
 export default function Security() {
   const { preferences } = usePreferences()
+  const { securityControls, securityScore, setSecurityControl } = useCloudStore()
   const timeUnit = preferences.timeUnit
   const [resourceId, setResourceId] = useState<ResourceId>('s3')
   const [results, setResults] = useState<Record<string, AccessResult>>({})
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null)
+  const [securityHistory, setSecurityHistory] = useState<SecurityEvent[]>(initialSecurityEvents)
 
-  const [hardeningDone, setHardeningDone] = useState<Set<string>>(
-    () => new Set(['mfa', 'cifrado', 'tls'])
-  )
   const [credentials, setCredentials] = useState<RotationCredential[]>(initialRotationCredentials)
   const [policyChecks, setPolicyChecks] = useState<Record<string, boolean>>({
     pp1: true,
@@ -332,16 +332,29 @@ export default function Security() {
     pp6: false
   })
 
-  const hardeningDoneCount = hardeningItems.filter((item) => hardeningDone.has(item.id)).length
-  const hardeningScore = Math.round((hardeningDoneCount / hardeningItems.length) * 100)
+  const hardeningDoneCount = Object.values(securityControls).filter(Boolean).length
+  const hardeningScore = securityScore
 
   function toggleHardening(id: string) {
-    setHardeningDone((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+    const item = hardeningItems.find((entry) => entry.id === id)
+    const nextValue = !securityControls[id]
+    setSecurityControl(id, nextValue)
+
+    if (!item) return
+
+    setSecurityHistory((previous) => [
+      {
+        id: `history-${Date.now()}`,
+        timestamp: 'ahora',
+        title: nextValue ? `${item.title} habilitado` : `${item.title} deshabilitado`,
+        detail: nextValue
+          ? 'El control de seguridad fue marcado como cumplido y el score recalculó.'
+          : 'El control fue desmarcado y requiere revisión para mantener el nivel recomendado.',
+        severity: nextValue ? 'info' : 'warning',
+        actor: 'Hardening'
+      },
+      ...previous
+    ].slice(0, 6))
   }
 
   function rotateCredential(id: string) {
@@ -412,7 +425,7 @@ export default function Security() {
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {hardeningItems.map((item) => {
-            const checked = hardeningDone.has(item.id)
+            const checked = Boolean(securityControls[item.id])
             return (
               <label
                 key={item.id}
@@ -426,7 +439,7 @@ export default function Security() {
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggleHardening(item.id)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-accentFrom dark:accent-darkAccentFrom"
                 />
                 <span className="min-w-0">
                   <span className="block text-sm font-medium text-textPrimary dark:text-darkTextPrimary">
@@ -462,7 +475,7 @@ export default function Security() {
         </p>
 
         <ol className="mt-6 relative ml-2 border-l-2 border-slate-200 pl-6 dark:border-darkBorder">
-          {initialSecurityEvents.map((event) => (
+          {securityHistory.map((event) => (
             <li key={event.id} className="relative pb-6 last:pb-0">
               <span className={`absolute -left-[31px] top-1 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-darkCard ${severityDotStyles[event.severity]}`} />
               <div className="flex flex-wrap items-center gap-2">
@@ -495,7 +508,7 @@ export default function Security() {
           <button
             type="button"
             onClick={handleRotateAll}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary/90 dark:bg-darkPrimary"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_14px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.24)]"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             Rotar todas
@@ -540,7 +553,7 @@ export default function Security() {
                   <button
                     type="button"
                     onClick={() => rotateCredential(credential.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-textPrimary transition-colors hover:bg-slate-50 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:bg-darkBorder/50"
+                    className="inline-flex items-center gap-1 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-2.5 py-1 text-xs font-semibold text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/30"
                   >
                     <RefreshCw className="h-3 w-3" />
                     Rotar ahora
@@ -584,7 +597,7 @@ export default function Security() {
                   type="checkbox"
                   checked={checked}
                   onChange={() => togglePolicyCheck(`pp${index}`)}
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-accentFrom dark:accent-darkAccentFrom"
                 />
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-2">
@@ -690,7 +703,7 @@ export default function Security() {
                     </div>
                     <button
                       type="button"
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-textPrimary transition-colors hover:bg-slate-50 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:bg-darkBorder/50"
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/30"
                     >
                       <Icon className="h-3.5 w-3.5" />
                       {item.actionLabel}
@@ -768,7 +781,7 @@ export default function Security() {
                     <td className="py-3.5 pr-6 text-right">
                       <button
                         type="button"
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-textPrimary transition-colors hover:bg-slate-50 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:bg-darkBorder/50"
+                        className="inline-flex items-center gap-1 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/30"
                       >
                         {row.statusTone === 'success' ? (
                           <Eye className="h-3.5 w-3.5 text-textSecondary dark:text-darkTextSecondary" />
@@ -808,11 +821,11 @@ export default function Security() {
               key={resource.id}
               type="button"
               onClick={() => handleResourceChange(resource.id)}
-              className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${
-                resourceId === resource.id
-                  ? 'border-primary bg-primary text-white dark:border-darkPrimary dark:bg-darkPrimary'
-                  : 'border-slate-200 bg-white text-textSecondary hover:bg-slate-50 hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:bg-darkBackground dark:hover:text-darkTextPrimary'
-              }`}
+className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
+                 resourceId === resource.id
+                   ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
+                   : 'border-slate-200 bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary dark:focus:ring-darkAccentFrom/40'
+               }`}
             >
               <span className="font-mono">{resource.permission}</span>
               <span className="ml-1 opacity-60">({resource.label})</span>
@@ -901,7 +914,7 @@ export default function Security() {
                             <button
                               type="button"
                               onClick={() => handleSimulate(user.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 dark:bg-darkPrimary dark:hover:bg-darkPrimary/90"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_14px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40"
                             >
                               {isExpanded ? (
                                 <>

@@ -48,8 +48,6 @@ function estimateCosts(quantity: number, hours: number, unitCost: number) {
 const LIGHT_CHART_COLORS = ['#2563EB', '#16A34A', '#F59E0B', '#DC2626']
 const DARK_CHART_COLORS = ['#3B82F6', '#22C55E', '#FBBF24', '#F87171']
 
-const BUDGET_LIMIT = 4000
-
 type Commitment = 'none' | '1y' | '3y'
 
 const commitmentOptions: { value: Commitment; label: string; discount: number }[] = [
@@ -87,7 +85,7 @@ export default function Costs() {
     ? { backgroundColor: '#111827', border: '1px solid #1E293B', borderRadius: '12px', color: '#E5E7EB' }
     : { backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', color: '#1E293B' }
 
-  const { costItems, monthlyHistory } = useCloudStore()
+  const { costItems, monthlyHistory, monthlyBudgetLimit } = useCloudStore()
   const [extraItems, setExtraItems] = useState<CostItem[]>([])
 
   const items = useMemo(() => {
@@ -202,7 +200,7 @@ export default function Costs() {
     value: item.monthlyCost
   }))
 
-  const budgetPercent = Math.min(100, (totalMonthly / BUDGET_LIMIT) * 100)
+  const budgetPercent = Math.min(100, (totalMonthly / monthlyBudgetLimit) * 100)
   const budgetStatus = budgetPercent < 70 ? 'ok' : budgetPercent <= 90 ? 'warn' : 'danger'
   const budgetBarClasses = {
     ok: 'bg-success dark:bg-darkSuccess',
@@ -224,10 +222,10 @@ export default function Costs() {
   const filteredAnnual = round(filteredCosts.reduce((sum, item) => sum + item.annualCost, 0))
 
   const filterTabClass = (isActive: boolean) =>
-    `rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40 ${
+    `rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
       isActive
-        ? 'border-primary bg-primary text-white'
-        : 'border-border bg-white text-textSecondary hover:bg-background hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:bg-darkBackground dark:hover:text-darkTextPrimary'
+        ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
+        : 'border-border bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary dark:focus:ring-darkAccentFrom/40'
     }`
 
   function handleEstimate(event: FormEvent) {
@@ -306,7 +304,7 @@ export default function Costs() {
             <select
               value={serviceName}
               onChange={(event) => setServiceName(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             >
               {serviceCatalog.map((service) => (
                 <option key={service.name} value={service.name}>
@@ -322,7 +320,7 @@ export default function Costs() {
               min={1}
               value={quantity}
               onChange={(event) => setQuantity(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             />
           </label>
           <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
@@ -333,7 +331,7 @@ export default function Costs() {
               max={HOURS_PER_MONTH}
               value={hours}
               onChange={(event) => setHours(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             />
           </label>
           <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
@@ -341,7 +339,7 @@ export default function Costs() {
             <select
               value={environment}
               onChange={(event) => setEnvironment(event.target.value as CostEnvironment)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
+              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             >
               <option value="dev">Dev</option>
               <option value="staging">Staging</option>
@@ -351,7 +349,7 @@ export default function Costs() {
           <button
             type="submit"
             disabled={!preview}
-            className="inline-flex items-center justify-center gap-2 self-end rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 self-end rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             Aplicar estimación
@@ -403,11 +401,11 @@ export default function Costs() {
           />
         </div>
         <p className="mt-3 text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
-          {currency.format(totalMonthly)} consumidos de {currency.format(BUDGET_LIMIT)} / mes
+          {currency.format(totalMonthly)} consumidos de {currency.format(monthlyBudgetLimit)} / mes
         </p>
         <p className="mt-1 text-xs text-textSecondary dark:text-darkTextSecondary">
           Valor restante:{' '}
-          {currency0.format(Math.max(0, BUDGET_LIMIT - totalMonthly))} ·{' '}
+          {currency0.format(Math.max(0, monthlyBudgetLimit - totalMonthly))} ·{' '}
           {budgetPercent < 70
             ? 'Dentro del presupuesto'
             : budgetPercent <= 90
@@ -550,7 +548,7 @@ export default function Costs() {
               Simulación
             </span>
           </h2>
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
+           <span className="rounded-full border border-transparent bg-gradient-to-r from-accentFrom/10 to-accentTo/10 px-3 py-1 text-sm font-semibold text-accentFrom shadow-[0_0_10px_rgba(124,58,237,0.12)] dark:from-darkAccentFrom/20 dark:to-darkAccentTo/20 dark:text-darkAccentFrom dark:shadow-[0_0_10px_rgba(139,92,246,0.18)]">
             {activeCommitment.discount}% de descuento
           </span>
         </div>
@@ -569,7 +567,7 @@ export default function Costs() {
               setCommitment(commitmentOptions[Number(event.target.value)].value)
             }
             aria-label="Compromiso de uso"
-            className="w-full cursor-pointer accent-primary dark:accent-darkPrimary"
+            className="w-full cursor-pointer accent-accentFrom dark:accent-darkAccentFrom"
           />
           <div className="mt-2 flex justify-between">
             {commitmentOptions.map((option) => {
@@ -577,7 +575,7 @@ export default function Costs() {
               return (
                 <span
                   key={option.value}
-                  className={`text-center text-xs font-semibold ${isActive ? 'text-primary dark:text-darkPrimary' : 'text-textSecondary dark:text-darkTextSecondary'}`}
+                  className={`text-center text-xs font-semibold ${isActive ? 'text-accentFrom dark:text-darkAccentFrom' : 'text-textSecondary dark:text-darkTextSecondary'}`}
                 >
                   {option.label}
                   <span className="block font-normal">{option.discount}% descuento</span>
@@ -693,7 +691,7 @@ export default function Costs() {
             <button
               type="button"
               onClick={handleExportCsv}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold text-textPrimary shadow-sm transition-colors hover:bg-background dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:bg-darkBackground"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold text-textPrimary shadow-sm transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/30"
             >
               <Download className="h-3.5 w-3.5" />
               Exportar CSV

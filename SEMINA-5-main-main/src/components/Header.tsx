@@ -32,14 +32,14 @@ export default function Header() {
             id="global-search"
             type="text"
             placeholder="Buscar...  ( / )"
-            className="w-40 rounded-xl border border-border bg-white py-2 pl-9 pr-3 text-sm text-textPrimary placeholder:text-textSecondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkPrimary dark:focus:ring-darkPrimary/20 lg:w-64"
+            className="w-40 rounded-xl border border-border bg-white py-2 pl-9 pr-3 text-sm text-textPrimary placeholder:text-textSecondary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20 lg:w-64"
           />
         </div>
 
         <button
           type="button"
           onClick={toggleTheme}
-          className="relative flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/20 dark:bg-darkPrimary/10 dark:text-darkPrimary dark:hover:bg-darkPrimary/20"
+           className="relative flex h-10 w-10 items-center justify-center rounded-full bg-accentFrom/10 text-accentFrom transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 hover:bg-gradient-to-r hover:from-accentFrom/15 hover:to-accentTo/15 dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom dark:hover:from-darkAccentFrom/20 dark:hover:to-darkAccentTo/20 dark:focus:ring-2 dark:focus:ring-darkAccentFrom/30"
           aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
         >
           <Sun
@@ -56,7 +56,7 @@ export default function Header() {
 
         <Link
           to="/config"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/20 dark:bg-darkPrimary/10 dark:text-darkPrimary dark:hover:bg-darkPrimary/20"
+           className="flex h-10 w-10 items-center justify-center rounded-full bg-accentFrom/10 text-accentFrom transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 hover:bg-gradient-to-r hover:from-accentFrom/15 hover:to-accentTo/15 dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom dark:hover:from-darkAccentFrom/20 dark:hover:to-darkAccentTo/20 dark:focus:ring-2 dark:focus:ring-darkAccentFrom/30"
           aria-label="Configuración"
         >
           <Settings className="h-5 w-5" />
@@ -64,7 +64,7 @@ export default function Header() {
 
         <button
           type="button"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary/20 dark:bg-darkPrimary/10 dark:text-darkPrimary dark:hover:bg-darkPrimary/20"
+           className="flex h-10 w-10 items-center justify-center rounded-full bg-accentFrom/10 text-accentFrom transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 hover:bg-gradient-to-r hover:from-accentFrom/15 hover:to-accentTo/15 dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom dark:hover:from-darkAccentFrom/20 dark:hover:to-darkAccentTo/20 dark:focus:ring-2 dark:focus:ring-darkAccentFrom/30"
           aria-label="Perfil de usuario"
         >
           <User className="h-5 w-5" />

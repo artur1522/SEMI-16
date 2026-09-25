@@ -193,11 +193,8 @@ export default function Dashboard() {
     }
   ]
 
-  const securityStatus = securityItems.some((item) => item.status === 'inactive')
-    ? 'En riesgo'
-    : securityItems.some((item) => item.status === 'warning')
-      ? 'Requiere revisión'
-      : 'Correcto'
+  const securityStatus =
+    securityScore < 50 ? 'En riesgo' : securityScore <= 80 ? 'Requiere revisión' : 'Correcto'
 
   const cloudResources = new Set(displayedRegions.flatMap((region) => region.deployedServices)).size
 
@@ -215,6 +212,29 @@ export default function Dashboard() {
           event.message.includes(selectedRegion.name) || event.message.includes(selectedRegion.id)
       )
     : events
+
+  const fallbackAlerts = [
+    {
+      id: 'alert-default-1',
+      timestamp: new Date(Date.now() - 4 * 60_000).toISOString(),
+      severity: 'warning' as const,
+      message: 'Pico de tráfico detectado en us-east-1 con latencia elevada.'
+    },
+    {
+      id: 'alert-default-2',
+      timestamp: new Date(Date.now() - 12 * 60_000).toISOString(),
+      severity: 'critical' as const,
+      message: 'RDS principal sin réplica activa en sa-east-1; requiere revisión.'
+    },
+    {
+      id: 'alert-default-3',
+      timestamp: new Date(Date.now() - 19 * 60_000).toISOString(),
+      severity: 'info' as const,
+      message: 'Se detectó tráfico de alta demanda y balanceo desbalanceado.'
+    }
+  ]
+
+  const alertFeed = scopedEvents.length > 0 ? scopedEvents : trafficLoad ? fallbackAlerts : fallbackAlerts
 
   const sortedProposals = useMemo(
     () =>
@@ -471,7 +491,7 @@ export default function Dashboard() {
           </div>
 
           <ul className="mt-2 max-h-80 divide-y divide-border overflow-y-auto dark:divide-darkBorder">
-            {scopedEvents.map((event) => {
+            {alertFeed.map((event) => {
               const meta = severityColors[event.severity]
               const Icon = meta.icon
               return (
@@ -492,7 +512,7 @@ export default function Dashboard() {
                 </li>
               )
             })}
-            {scopedEvents.length === 0 && (
+            {alertFeed.length === 0 && (
               <li className="py-6 text-center text-sm text-textSecondary dark:text-darkTextSecondary">
                 No hay alertas ni actividad reciente en esta región.
               </li>

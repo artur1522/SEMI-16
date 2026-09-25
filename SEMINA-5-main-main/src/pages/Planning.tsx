@@ -425,26 +425,37 @@ export default function Planning() {
             <div>
               <label className={labelClass}>Servicios Cloud</label>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                {awsServices.map((s) => (
-                  <label key={s.id} className="flex items-center gap-2 rounded-md border border-border bg-white px-2 py-1 text-xs text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary">
-                    <input type="checkbox" checked={form.selectedServices.includes(s.id)} onChange={() => handleServiceToggle(s.id)} className="h-4 w-4 accent-accentFrom dark:accent-darkAccentFrom" />
-                    <span className="truncate">{s.name}</span>
-                  </label>
-                ))}
+                {awsServices.map((s) => {
+                  const selected = form.selectedServices.includes(s.id)
+                  return (
+                    <div
+                      key={s.id}
+                      className={`rounded-md border px-2 py-1.5 transition-colors ${
+                        selected
+                          ? 'border-accentFrom/40 bg-accentFrom/5 dark:border-darkAccentFrom/40 dark:bg-darkAccentFrom/10'
+                          : 'border-border bg-white dark:border-darkBorder dark:bg-darkCard'
+                      }`}
+                    >
+                      <label className="flex cursor-pointer items-start gap-2 text-xs text-textPrimary dark:text-darkTextPrimary">
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={() => handleServiceToggle(s.id)}
+                          className="mt-0.5 h-4 w-4 accent-accentFrom dark:accent-darkAccentFrom"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{s.name}</span>
+                          {selected && (
+                            <span className="mt-0.5 block text-[10px] leading-relaxed text-textSecondary dark:text-darkTextSecondary">
+                              {s.mainFunction}
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    </div>
+                  )
+                })}
               </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <select name="availabilityLevel" value={form.availabilityLevel} onChange={handleChange} className={fieldClass(Boolean(errors.availabilityLevel))}>
-                <option value="">Disponibilidad</option>
-                {availabilityOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-              <select name="priority" value={form.priority} onChange={handleChange} className={fieldClass(false)}>
-                {priorityOptions.map((o) => <option key={o.value} value={o.value}>Prioridad: {o.label}</option>)}
-              </select>
-              <select name="status" value={form.status} onChange={handleChange} className={fieldClass(false)}>
-                {statusOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
             </div>
 
             {form.availabilityLevel && (

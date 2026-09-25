@@ -1,0 +1,9 @@
+{
+  "name": "seminario-06",
+  "private": true,
+  "scripts": {
+    "install:app": "npm install --prefix SEMINA-5-main-main",
+    "build": "npm install --prefix SEMINA-5-main-main && npm --prefix SEMINA-5-main-main run build && node scripts/build-root.js",
+    "dev": "npm --prefix SEMINA-5-main-main run dev -- --host 0.0.0.0 --port 4173"
+  }
+}

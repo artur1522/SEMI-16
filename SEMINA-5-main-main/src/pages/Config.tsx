@@ -99,7 +99,7 @@ function SegmentedControl<T extends string>({
               aria-pressed={active}
               className={`flex items-start gap-2 rounded-xl border p-3 text-left transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
                 active
-                  ? 'border-transparent bg-gradient-to-r from-accentFrom/10 via-white to-accentTo/10 text-textPrimary shadow-[0_0_12px_rgba(124,58,237,0.12)] dark:from-darkAccentFrom/15 dark:via-darkCard dark:to-darkAccentTo/15 dark:shadow-[0_0_12px_rgba(139,92,246,0.18)] dark:focus:ring-darkAccentFrom/40'
+                  ? 'border-transparent bg-gradient-to-r from-accentFrom/10 via-white to-accentTo/10 text-textPrimary dark:text-darkTextPrimary shadow-[0_0_12px_rgba(124,58,237,0.12)] dark:from-darkAccentFrom/15 dark:via-darkCard dark:to-darkAccentTo/15 dark:shadow-[0_0_12px_rgba(139,92,246,0.18)] dark:focus:ring-darkAccentFrom/40'
                   : 'border-border bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/40'
               }`}
             >

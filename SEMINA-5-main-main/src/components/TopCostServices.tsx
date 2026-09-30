@@ -6,7 +6,7 @@ const money = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2
 })
 
-const RANK_STYLES = ['text-warning', 'text-textSecondary', 'text-accentFrom']
+const RANK_STYLES = ['text-warning', 'text-textSecondary dark:text-darkTextSecondary', 'text-accentFrom dark:text-darkAccentFrom']
 
 export default function TopCostServices({ items }: { items: CostItem[] }) {
   const top = [...items].sort((a, b) => b.monthlyCost - a.monthlyCost).slice(0, 3)

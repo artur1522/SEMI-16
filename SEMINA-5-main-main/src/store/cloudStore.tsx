@@ -221,12 +221,15 @@ function buildRegions(servers: CloudServer[]): Region[] {
   return regionReferences.map((reference) => {
     const inRegion = servers.filter((server) => server.regionId === reference.id)
     const deployed = Array.from(new Set(inRegion.map((server) => server.serviceId)))
-    const hasIssue = inRegion.some((server) => server.status !== 'active')
+    const hasMaintenance = reference.availabilityZones.some((zone) => zone.status === 'inactive')
+    const hasIssue =
+      reference.availabilityZones.some((zone) => zone.status === 'warning') ||
+      inRegion.some((server) => server.status !== 'active')
     return {
       ...reference,
       deployedServices: deployed,
       serversDeployed: inRegion.length,
-      status: hasIssue ? 'degraded' : 'operational'
+      status: hasMaintenance ? 'down' : hasIssue ? 'degraded' : 'operational'
     }
   })
 }

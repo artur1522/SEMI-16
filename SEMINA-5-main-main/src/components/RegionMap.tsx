@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from 'react-simple-maps'
-import { Boxes, Globe, RotateCcw, Server, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ComposableMap, Geographies, Geography, Line, Marker, ZoomableGroup } from 'react-simple-maps'
+import { Crosshair, Globe, MapPin, RotateCcw, Server } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
-import type { Region, RegionStatus } from '../types/cloud'
-import StatusBadge from './StatusBadge'
+import { useLocalLocation } from '../hooks/useLocalLocation'
+import { deriveMetrics } from '../store/cloudStore'
+import type { CloudServer, Region, RegionStatus } from '../types/cloud'
+import RegionDetailModal from './RegionDetailModal'
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
@@ -13,10 +15,25 @@ const FOCUS_ZOOM = 3.2
 const ANIMATION_DURATION = 850
 
 const REGION_COORDS: Record<string, [number, number]> = {
+  'us-west-2': [-119.7, 45.8],
   'us-east-1': [-78.65, 37.4],
   'sa-east-1': [-46.63, -23.55],
   'eu-west-1': [-6.26, 53.35],
-  'ap-southeast-1': [103.82, 1.35]
+  'eu-central-1': [8.68, 50.11],
+  'ap-south-1': [72.88, 19.07],
+  'ap-southeast-1': [103.82, 1.35],
+  'ap-northeast-1': [139.69, 35.68]
+}
+
+const REGION_LABELS: Record<string, { x: number; y: number; anchor: 'start' | 'end' }> = {
+  'us-west-2': { x: 12, y: -13, anchor: 'start' },
+  'us-east-1': { x: 12, y: -13, anchor: 'start' },
+  'sa-east-1': { x: 12, y: -12, anchor: 'start' },
+  'eu-west-1': { x: -12, y: -18, anchor: 'end' },
+  'eu-central-1': { x: 13, y: -17, anchor: 'start' },
+  'ap-south-1': { x: 11, y: -12, anchor: 'start' },
+  'ap-southeast-1': { x: 12, y: 18, anchor: 'start' },
+  'ap-northeast-1': { x: -12, y: -12, anchor: 'end' }
 }
 
 const STATUS_LIGHT: Record<RegionStatus, string> = {
@@ -33,8 +50,8 @@ const STATUS_DARK: Record<RegionStatus, string> = {
 
 const STATUS_LABELS: Record<RegionStatus, string> = {
   operational: 'Operativa',
-  degraded: 'Degradada',
-  down: 'Caída'
+  degraded: 'Degradado',
+  down: 'Mantenimiento'
 }
 
 function easeInOutCubic(t: number): number {
@@ -43,6 +60,7 @@ function easeInOutCubic(t: number): number {
 
 interface RegionMapProps {
   regions: Region[]
+  servers?: CloudServer[]
 }
 
 interface FloatView {
@@ -50,13 +68,36 @@ interface FloatView {
   zoom: number
 }
 
-export default function RegionMap({ regions }: RegionMapProps) {
+function distanceKm(first: [number, number], second: [number, number]) {
+  const radians = (degrees: number) => (degrees * Math.PI) / 180
+  const [firstLongitude, firstLatitude] = first
+  const [secondLongitude, secondLatitude] = second
+  const latitudeDelta = radians(secondLatitude - firstLatitude)
+  const longitudeDelta = radians(secondLongitude - firstLongitude)
+  const arc =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(radians(firstLatitude)) *
+      Math.cos(radians(secondLatitude)) *
+      Math.sin(longitudeDelta / 2) ** 2
+  return 6371 * 2 * Math.atan2(Math.sqrt(arc), Math.sqrt(1 - arc))
+}
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('es-PE', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2
+  }).format(amount)
+}
+
+export default function RegionMap({ regions, servers = [] }: RegionMapProps) {
   const { theme } = useTheme()
   const isDark = theme === 'dark'
 
   const [view, setView] = useState<FloatView>({ center: WORLD_CENTER, zoom: WORLD_ZOOM })
   const [selected, setSelected] = useState<Region | null>(null)
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
+  const { state: localLocation, detectLocation, clearLocation } = useLocalLocation()
 
   const viewRef = useRef<FloatView>({ center: WORLD_CENTER, zoom: WORLD_ZOOM })
   const rafRef = useRef<number | null>(null)
@@ -72,10 +113,28 @@ export default function RegionMap({ regions }: RegionMapProps) {
   }, [])
 
   const maxServers = regions.reduce((max, region) => Math.max(max, region.serversDeployed), 1)
-  const landFill = isDark ? '#334155' : '#E2E8F0'
-  const landHoverFill = isDark ? '#475569' : '#CBD5E1'
-  const landStroke = isDark ? '#0F172A' : '#FFFFFF'
+  const landFill = '#386b8c'
+  const landHoverFill = '#4d83a4'
+  const landStroke = '#183b5b'
   const statusColor = (status: RegionStatus) => (isDark ? STATUS_DARK : STATUS_LIGHT)[status]
+  const monthlyCosts = useMemo(
+    () =>
+      Object.fromEntries(
+        regions.map((region) => [
+          region.id,
+          deriveMetrics(servers.filter((server) => server.regionId === region.id)).totalMonthly
+        ])
+      ),
+    [regions, servers]
+  )
+  const nearestRegion = useMemo(() => {
+    if (localLocation.status !== 'ready') return null
+    const origin: [number, number] = [localLocation.location.longitude, localLocation.location.latitude]
+    return Object.entries(REGION_COORDS)
+      .map(([id, coordinates]) => ({ id, distance: distanceKm(origin, coordinates) }))
+      .sort((first, second) => first.distance - second.distance)[0]
+  }, [localLocation])
+  const localLatency = nearestRegion ? Math.round(35 + nearestRegion.distance / 72) : null
 
   function animateTo(targetCenter: [number, number], targetZoom: number) {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
@@ -120,28 +179,49 @@ export default function RegionMap({ regions }: RegionMapProps) {
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm dark:border-darkBorder dark:bg-darkCard">
+    <>
+    <section className="overflow-hidden rounded-xl border border-slate-600 bg-[#0b1d38] text-slate-100 shadow-[0_20px_55px_rgba(2,12,30,0.28)]">
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 sm:px-6 sm:pt-6">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <Globe className="h-5 w-5 text-primary dark:text-darkPrimary" />
-            Mapa de regiones
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <Globe className="h-5 w-5 text-cyan-300" />
+            Mapa Global de Infraestructura
           </h2>
-          <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-            Haz clic en un marcador para inspeccionar la región y acercarla.
+          <p className="mt-1 text-sm text-slate-300">
+            Ubicación física de {regions.length} regiones AWS activas y enlaces de backbone simulados hacia el hub primario (US East, N. Virginia).
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleReset}
-          className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3.5 py-2 text-xs font-semibold text-textPrimary transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/40"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Restablecer vista
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {localLocation.status === 'ready' && (
+            <button
+              type="button"
+              onClick={clearLocation}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            >
+              Quitar nodo local
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleReset}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-600 bg-slate-900/70 px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Restablecer
+          </button>
+          <button
+            type="button"
+            onClick={detectLocation}
+            disabled={localLocation.status === 'detecting'}
+            className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-300/50 disabled:cursor-wait disabled:opacity-60"
+          >
+            <Crosshair className="h-4 w-4" />
+            {localLocation.status === 'detecting' ? 'Detectando…' : 'Detectar mi ubicación'}
+          </button>
+        </div>
       </div>
 
-      <div className="relative mt-4 h-56 border-t border-border pb-6 dark:border-darkBorder sm:h-72 sm:pb-8 md:h-80 md:pb-10 lg:h-96 xl:h-[28rem]">
+      <div className="relative mt-4 h-64 border-y border-slate-700 bg-[radial-gradient(ellipse_at_50%_42%,#102b50_0%,#091b38_72%)] sm:h-80 md:h-[23rem] lg:h-[26rem] xl:h-[27rem]">
         <ComposableMap projection="geoEqualEarth" width={1000} height={480} className="h-full w-full">
           <ZoomableGroup
             center={view.center}
@@ -167,6 +247,20 @@ export default function RegionMap({ regions }: RegionMapProps) {
               }
             </Geographies>
 
+            {regions
+              .filter((region) => region.id !== 'us-east-1' && REGION_COORDS[region.id])
+              .map((region) => (
+                <Line
+                  key={`backbone-${region.id}`}
+                  from={REGION_COORDS[region.id]}
+                  to={REGION_COORDS['us-east-1']}
+                  stroke={region.status === 'down' ? '#fb7185' : '#55c9ef'}
+                  strokeWidth={1.2}
+                  strokeDasharray="5 5"
+                  opacity={0.72}
+                />
+              ))}
+
             {regions.map((region) => {
               const coords = REGION_COORDS[region.id]
               if (!coords) return null
@@ -174,11 +268,16 @@ export default function RegionMap({ regions }: RegionMapProps) {
               const isActive = selected?.id === region.id
               const radius = 7 + (region.serversDeployed / maxServers) * 8
               const iconSize = Math.round(radius * 1.1)
+              const label = REGION_LABELS[region.id]
+              const labelX = label?.x ?? 12
+              const labelY = label?.y ?? -12
+              const labelAnchor = label?.anchor ?? 'start'
 
               return (
                 <Marker key={region.id} coordinates={coords} onClick={() => handleSelect(region)}>
-                  <g className="cursor-pointer">
+                  <g className="cursor-pointer" aria-label={`${region.name}, ${region.latencyMs} milisegundos`}>
                     <circle r={radius + 5} fill={color} opacity={isActive ? 0.25 : 0.12} />
+                    <circle r={radius + 8} fill={color} opacity={0.3} className="animate-ping" />
                     {isActive && (
                       <circle
                         r={radius + 10}
@@ -201,18 +300,59 @@ export default function RegionMap({ regions }: RegionMapProps) {
                       className="pointer-events-none text-white"
                       style={{ transform: `translate(${-iconSize / 2}px, ${-iconSize / 2}px)` }}
                     />
+                    <text
+                      x={labelX}
+                      y={labelY}
+                      textAnchor={labelAnchor}
+                      fill="#f8fafc"
+                      fontSize="10"
+                      fontWeight="700"
+                      style={{ paintOrder: 'stroke', stroke: '#0b1d38', strokeWidth: 3, strokeLinejoin: 'round' }}
+                    >
+                      {region.name}
+                    </text>
+                    <text
+                      x={labelX}
+                      y={labelY + 12}
+                      textAnchor={labelAnchor}
+                      fill="#9bb2c9"
+                      fontSize="8"
+                      style={{ paintOrder: 'stroke', stroke: '#0b1d38', strokeWidth: 2.5, strokeLinejoin: 'round' }}
+                    >
+                      {region.id} · {region.latencyMs} ms
+                    </text>
+                    <text
+                      x={labelX}
+                      y={labelY + 22}
+                      textAnchor={labelAnchor}
+                      fill="#9bb2c9"
+                      fontSize="8"
+                      style={{ paintOrder: 'stroke', stroke: '#0b1d38', strokeWidth: 2.5, strokeLinejoin: 'round' }}
+                    >
+                      {region.deployedServices.length} servicios · {region.availabilityZones.length} AZ
+                    </text>
                   </g>
                 </Marker>
               )
             })}
+
+            {localLocation.status === 'ready' && (
+              <Marker coordinates={[localLocation.location.longitude, localLocation.location.latitude]}>
+                <g aria-label={`Nodo local ${localLocation.location.district ?? 'detectado'}`}>
+                  <circle r={19} fill="#F97316" opacity={0.25} className="animate-ping" />
+                  <circle r={11} fill="#F97316" stroke="#FFFFFF" strokeWidth={2} />
+                  <MapPin size={15} strokeWidth={2.5} className="pointer-events-none text-white" style={{ transform: 'translate(-7.5px, -12px)' }} />
+                </g>
+              </Marker>
+            )}
           </ZoomableGroup>
         </ComposableMap>
 
-        <div className="pointer-events-none absolute right-3 top-3 z-10 hidden flex-wrap items-center gap-3 rounded-full bg-white/85 px-3.5 py-2 text-xs font-medium text-textSecondary shadow-sm backdrop-blur dark:bg-darkCard/85 dark:text-darkTextSecondary sm:flex">
+        <div className="pointer-events-none absolute right-3 top-3 z-10 hidden flex-wrap items-center gap-3 rounded-full border border-slate-600 bg-[#0b1d38]/90 px-3.5 py-2 text-xs font-medium text-slate-200 shadow-sm backdrop-blur sm:flex">
           {(['operational', 'degraded', 'down'] as RegionStatus[]).map((status) => (
             <span key={status} className="flex items-center gap-1.5">
               <span
-                className="h-2.5 w-2.5 rounded-full"
+                className="h-2 w-2 rounded-full"
                 style={{ backgroundColor: statusColor(status) }}
               />
               {STATUS_LABELS[status]}
@@ -221,60 +361,54 @@ export default function RegionMap({ regions }: RegionMapProps) {
         </div>
 
         <div className="pointer-events-none absolute bottom-3 left-3 right-3 z-10 sm:bottom-4 sm:left-4 sm:right-auto">
-          {selected ? (
-            <div className="pointer-events-auto w-full max-w-xs rounded-2xl border border-border bg-white/95 p-4 shadow-xl backdrop-blur dark:border-darkBorder dark:bg-darkCard/95">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-textPrimary dark:text-darkTextPrimary">
-                    {selected.name}
-                  </p>
-                  <p className="mt-0.5 truncate text-xs text-textSecondary dark:text-darkTextSecondary">
-                    {selected.location}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  aria-label="Cerrar detalles de la región"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-textSecondary transition-colors hover:bg-danger/10 hover:text-danger dark:text-darkTextSecondary dark:hover:bg-darkDanger/10 dark:hover:text-darkDanger"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mt-2">
-                <StatusBadge status={selected.status} />
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-xl bg-background p-2.5 dark:bg-darkBackground">
-                  <p className="flex items-center gap-1 text-[11px] text-textSecondary dark:text-darkTextSecondary">
-                    <Server className="h-3 w-3" />
-                    Servidores
-                  </p>
-                  <p className="mt-0.5 text-lg font-bold text-textPrimary dark:text-darkTextPrimary">
-                    {selected.serversDeployed}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-background p-2.5 dark:bg-darkBackground">
-                  <p className="flex items-center gap-1 text-[11px] text-textSecondary dark:text-darkTextSecondary">
-                    <Boxes className="h-3 w-3" />
-                    Servicios activos
-                  </p>
-                  <p className="mt-0.5 text-lg font-bold text-textPrimary dark:text-darkTextPrimary">
-                    {selected.deployedServices.length}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/85 px-3.5 py-1.5 text-xs font-medium text-textSecondary shadow-sm backdrop-blur dark:bg-darkCard/85 dark:text-darkTextSecondary"
-            >
-              <Globe className="h-3.5 w-3.5" />
-              Haz clic en un marcador para ver los detalles
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-600 bg-[#0b1d38]/90 px-3.5 py-1.5 text-xs font-medium text-slate-200 shadow-sm backdrop-blur">
+            <Globe className="h-3.5 w-3.5" />
+            Pulsa una región para ver el detalle técnico
+          </span>
         </div>
       </div>
+      {localLocation.status === 'error' && (
+        <p role="alert" className="border-t border-rose-900 bg-rose-950/60 px-5 py-3 text-sm text-rose-200">
+          {localLocation.message} Comprueba el permiso de ubicación y usa HTTPS o localhost.
+        </p>
+      )}
+      <div className="border-t border-slate-700 bg-[#0b1d38] px-5 py-4 sm:px-6">
+        {localLocation.status === 'ready' ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-sm font-semibold text-white">
+                <MapPin className="h-4 w-4 shrink-0 text-orange-400" />
+                Nodo Local: {localLocation.location.district ?? localLocation.location.city ?? 'Ubicación detectada'}
+                {localLocation.location.city && localLocation.location.city !== localLocation.location.district ? `, ${localLocation.location.city}` : ''}
+              </p>
+              <p className="mt-1 text-xs text-slate-300">
+                {localLocation.location.address ?? `${localLocation.location.latitude.toFixed(4)}, ${localLocation.location.longitude.toFixed(4)}`}
+                {localLocation.location.country && ` · ${localLocation.location.country}`}
+              </p>
+            </div>
+            {nearestRegion && (
+              <div className="rounded-lg border border-orange-400/50 bg-orange-950/40 px-3 py-2">
+                <p className="text-[11px] font-semibold uppercase text-orange-200">Región AWS más cercana · RTT simulado</p>
+                <p className="mt-0.5 text-sm font-bold text-orange-100">
+                  {regions.find((region) => region.id === nearestRegion.id)?.name ?? nearestRegion.id} · {localLatency} ms
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-300">
+            El nodo local es opcional; al detectar tu ubicación, el navegador solicitará permiso GPS y el mapa calculará el RTT simulado a la región AWS más cercana.
+          </p>
+        )}
+      </div>
     </section>
+    {selected && (
+      <RegionDetailModal
+        region={selected}
+        monthlyCost={monthlyCosts[selected.id] ?? 0}
+        onClose={() => setSelected(null)}
+      />
+    )}
+    </>
   )
 }

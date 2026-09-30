@@ -5,7 +5,9 @@ import './styles/tailwind.css'
 import App from './App'
 import { ThemeProvider } from './hooks/useTheme'
 import { PreferencesProvider } from './hooks/usePreferences'
+import { NotificationProvider } from './hooks/NotificationContext'
 import { CloudProvider } from './store/cloudStore'
+import ToastContainer from './components/ToastContainer'
 
 const root = createRoot(document.getElementById('root')!)
 
@@ -14,9 +16,12 @@ root.render(
     <BrowserRouter>
       <ThemeProvider>
         <PreferencesProvider>
-          <CloudProvider>
-            <App />
-          </CloudProvider>
+          <NotificationProvider>
+            <CloudProvider>
+              <App />
+              <ToastContainer />
+            </CloudProvider>
+          </NotificationProvider>
         </PreferencesProvider>
       </ThemeProvider>
     </BrowserRouter>

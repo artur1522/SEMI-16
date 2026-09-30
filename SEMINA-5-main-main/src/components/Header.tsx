@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom'
 import { Moon, Search, Sun, User, Settings } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTheme } from '../hooks/useTheme'
+import NotificationBell from './NotificationBell'
 
 const titles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -53,6 +54,8 @@ export default function Header() {
             }`}
           />
         </button>
+
+        <NotificationBell />
 
         <Link
           to="/config"

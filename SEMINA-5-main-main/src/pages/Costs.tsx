@@ -1,8 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, Calculator, Calendar, DollarSign, Download, Gauge, LineChart as LineChartIcon, Plus, TrendingUp, Wallet } from 'lucide-react'
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, Calculator, Calendar, DollarSign, Gauge, LineChart as LineChartIcon, Plus, TrendingUp, Wallet } from 'lucide-react'
 import { CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import StatCard from '../components/StatCard'
 import CostCard from '../components/CostCard'
+import ExportMenu from '../components/ExportMenu'
 import { useTheme } from '../hooks/useTheme'
 import { usePreferences } from '../hooks/usePreferences'
 import { useCloudStore } from '../store/cloudStore'
@@ -249,32 +250,6 @@ export default function Costs() {
       if (index === -1) return [nextItem, ...previous]
       return previous.map((item, i) => (i === index ? { ...item, ...nextItem, id: item.id } : item))
     })
-  }
-
-  function handleExportCsv() {
-    const header = ['Servicio', 'Categoría', 'Entorno', 'Cantidad', 'Costo mensual', 'Costo anual', 'On-demand', 'Reservado']
-    const rows = discountedCosts.map((item) => [
-      item.service,
-      item.category,
-      item.environment,
-      item.quantity,
-      item.monthlyCost.toFixed(2),
-      item.annualCost.toFixed(2),
-      (item.onDemandCost ?? 0).toFixed(2),
-      (item.reservedCost ?? 0).toFixed(2)
-    ])
-    const csvContent = [header, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'desglose-costos.csv'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
   }
 
   return (
@@ -688,14 +663,29 @@ export default function Costs() {
                 {currency0.format(filteredAnnual)}
               </span>
             </span>
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold text-textPrimary shadow-sm transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/30"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Exportar CSV
-            </button>
+            <ExportMenu
+              fileName="costos-filtrados"
+              title="Reporte de costos"
+              headers={['Servicio', 'Categoría', 'Entorno', 'Cantidad', 'Costo mensual', 'Costo anual', 'On-demand', 'Reservado']}
+              rows={filteredCosts.map((item) => [
+                item.service,
+                item.category,
+                item.environment,
+                item.quantity,
+                item.monthlyCost.toFixed(2),
+                item.annualCost.toFixed(2),
+                (item.onDemandCost ?? 0).toFixed(2),
+                (item.reservedCost ?? 0).toFixed(2)
+              ])}
+              summary={[
+                { label: 'Servicios incluidos', value: filteredCosts.length },
+                { label: 'Subtotal mensual', value: currency.format(filteredMonthly) },
+                { label: 'Subtotal anual', value: currency.format(filteredAnnual) },
+                { label: 'Entorno', value: environmentFilters.find((filter) => filter.value === envFilter)?.label ?? 'Todos' },
+                { label: 'Categoría', value: categoryFilters.find((filter) => filter.value === catFilter)?.label ?? 'Todas' },
+                { label: 'Compromiso', value: activeCommitment.label }
+              ]}
+            />
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ArrowDownUp, Flame, Search, Shuffle, X } from 'lucide-react'
+import ExportMenu from '../components/ExportMenu'
 import ServiceCard from '../components/ServiceCard'
 import ServiceDetailModal from '../components/ServiceDetailModal'
 import { awsServices } from '../data/awsServices'
@@ -132,7 +133,7 @@ export default function Services() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <label className="relative inline-flex items-center">
             <ArrowDownUp className="pointer-events-none absolute left-3 h-4 w-4 text-textSecondary dark:text-darkTextSecondary" />
             <select
@@ -170,6 +171,33 @@ export default function Services() {
               </button>
             )}
           </div>
+          <ExportMenu
+            fileName="servicios-filtrados"
+            title="Reporte de servicios AWS"
+            headers={['ID', 'Servicio', 'Nombre completo', 'Categoría', 'Estado', 'Popularidad', 'Descripción', 'Función principal', 'Cuotas', 'Alternativas', 'Documentación']}
+            rows={filteredServices.map((service) => [
+              service.id,
+              service.name,
+              service.fullName,
+              categoryLabels[service.category] ?? service.category,
+              service.status,
+              popularity.get(service.id) ?? 0,
+              service.description,
+              service.mainFunction,
+              service.quotas,
+              service.alternatives.join('; '),
+              service.docsUrl
+            ])}
+            summary={[
+              { label: 'Servicios incluidos', value: filteredServices.length },
+              { label: 'Coincidencia de búsqueda', value: query.trim() || 'Todas' },
+              { label: 'Categoría', value: category === 'all' ? 'Todas' : categoryLabels[category] ?? category },
+              { label: 'Activos', value: filteredServices.filter((service) => service.status === 'active').length },
+              { label: 'En advertencia', value: filteredServices.filter((service) => service.status === 'warning').length },
+              { label: 'Inactivos', value: filteredServices.filter((service) => service.status === 'inactive').length },
+              { label: 'Apariciones en propuestas', value: filteredServices.reduce((sum, service) => sum + (popularity.get(service.id) ?? 0), 0) }
+            ]}
+          />
         </div>
       </div>
 

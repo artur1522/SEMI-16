@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Info, PiggyBank, Plus, Server, ShieldCheck, Workflow, Trash2 } from 'lucide-react'
 import RegionCard from '../components/RegionCard'
+import RegionMap from '../components/RegionMap'
 import { useCloudStore } from '../store/cloudStore'
 import { regionReferences } from '../data/regions'
 import { awsServices } from '../data/awsServices'
@@ -20,25 +21,37 @@ interface FailoverSuggestion {
 }
 
 const FAILOVER_MAP: Record<string, FailoverSuggestion> = {
+  'us-west-2': { id: 'us-east-1', name: 'US East (N. Virginia)', latencyMs: 78 },
   'us-east-1': { id: 'eu-west-1', name: 'EU (Ireland)', latencyMs: 65 },
   'sa-east-1': { id: 'us-east-1', name: 'US East (N. Virginia)', latencyMs: 75 },
   'eu-west-1': { id: 'us-east-1', name: 'US East (N. Virginia)', latencyMs: 65 },
+  'eu-central-1': { id: 'eu-west-1', name: 'EU (Ireland)', latencyMs: 18 },
+  'ap-south-1': { id: 'ap-southeast-1', name: 'Asia Pacific (Singapore)', latencyMs: 62 },
+  'ap-northeast-1': { id: 'ap-southeast-1', name: 'Asia Pacific (Singapore)', latencyMs: 68 },
   'ap-southeast-1': { id: 'eu-west-1', name: 'EU (Ireland)', latencyMs: 115 }
 }
 
 const COMPLIANCE_MAP: Record<string, string[]> = {
+  'us-west-2': ['SOC 2', 'ISO 27001'],
   'us-east-1': ['SOC 2', 'ISO 27001'],
   'sa-east-1': ['LGPD'],
   'eu-west-1': ['GDPR', 'ISO 27001'],
+  'eu-central-1': ['GDPR', 'ISO 27001'],
+  'ap-south-1': ['ISO 27001'],
+  'ap-northeast-1': ['APPI', 'ISO 27001'],
   'ap-southeast-1': ['PDPA', 'ISO 27001']
 }
 
 type ReplicationState = 'synced' | 'lagging'
 
 const regionPricing: Record<string, { factor: number; currency: string }> = {
+  'us-west-2': { factor: 1.04, currency: 'USD' },
   'us-east-1': { factor: 1.0, currency: 'USD' },
   'sa-east-1': { factor: 1.28, currency: 'BRL' },
   'eu-west-1': { factor: 0.92, currency: 'EUR' },
+  'eu-central-1': { factor: 0.96, currency: 'EUR' },
+  'ap-south-1': { factor: 0.88, currency: 'INR' },
+  'ap-northeast-1': { factor: 1.08, currency: 'JPY' },
   'ap-southeast-1': { factor: 1.36, currency: 'SGD' }
 }
 
@@ -112,6 +125,10 @@ export default function Infrastructure() {
           <span className="h-2.5 w-2.5 rounded-full bg-danger dark:bg-darkDanger" />
           Latencia alta (&gt; 150 ms)
         </span>
+      </div>
+
+      <div className="mt-6">
+        <RegionMap regions={regions} servers={servers} />
       </div>
 
       <section className="glass-card mt-6 rounded-3xl p-5">

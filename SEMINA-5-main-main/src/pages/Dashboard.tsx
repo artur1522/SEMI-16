@@ -30,6 +30,8 @@ import SecurityCard from '../components/SecurityCard'
 import TopCostServices from '../components/TopCostServices'
 import UptimeCard from '../components/UptimeCard'
 import NetworkFlowDiagram from '../components/NetworkFlowDiagram'
+import CloudWatchMetrics from '../components/CloudWatchMetrics'
+import WellArchitectedScorecard from '../components/WellArchitectedScorecard'
 import { suggestArchitectures } from '../data/architecture'
 import { awsServices } from '../data/awsServices'
 import { deriveMetrics, useCloudStore } from '../store/cloudStore'
@@ -351,7 +353,7 @@ export default function Dashboard() {
 
       <RegionFilter value={regionId} regions={regionReferences} onChange={setRegionId} />
 
-      <RegionMap regions={displayedRegions} />
+      <RegionMap regions={displayedRegions} servers={filteredServers} />
 
       {!compact && (
         <section>
@@ -404,6 +406,13 @@ export default function Dashboard() {
           </div>
         </section>
       )}
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:items-start">
+        <div className="xl:col-span-2">
+          <CloudWatchMetrics servers={filteredServers} trafficLoad={trafficLoad} />
+        </div>
+        <WellArchitectedScorecard servers={filteredServers} />
+      </div>
 
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-3 xl:items-start">
         <div className={compact ? 'space-y-5 xl:col-span-2' : 'space-y-8 xl:col-span-2'}>

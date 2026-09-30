@@ -104,7 +104,7 @@ export default function OnboardingTour() {
                   setCurrent((previous) => previous + 1)
                 }
               }}
-              className="rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40"
+              className="btn btn-accent"
             >
               {current === steps.length - 1 ? 'Comenzar' : 'Siguiente'}
             </button>

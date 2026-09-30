@@ -1,12 +1,46 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, Calculator, Calendar, DollarSign, Gauge, LineChart as LineChartIcon, Plus, TrendingUp, Wallet } from 'lucide-react'
-import { CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import {
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  Calculator,
+  Calendar,
+  DollarSign,
+  Gauge,
+  LineChart as LineChartIcon,
+  Plus,
+  TrendingUp,
+  Wallet
+} from 'lucide-react'
+import {
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts'
 import StatCard from '../components/StatCard'
 import CostCard from '../components/CostCard'
 import ExportMenu from '../components/ExportMenu'
+import ProjectCard from '../components/ProjectCard'
 import { useTheme } from '../hooks/useTheme'
 import { usePreferences } from '../hooks/usePreferences'
 import { useCloudStore } from '../store/cloudStore'
+import { regionReferences } from '../data/regions'
+import {
+  COST_CATEGORY_LABELS,
+  HOURS_PER_MONTH,
+  SERVICE_CATEGORY,
+  SERVICE_LABELS,
+  UNIT_COSTS
+} from '../data/cloudOpsData'
+import { Badge, Button, ChipTabs, Field, PageHeader, ProgressBar, Section, SelectInput, TextInput } from '../components/ui'
 import type { CostCategory, CostEnvironment, CostItem } from '../types/cloud'
 
 function buildCurrencyFormatters(currencyCode: string) {
@@ -26,16 +60,15 @@ function buildCurrencyFormatters(currencyCode: string) {
 
 const round = (value: number) => Math.round(value * 100) / 100
 
-const HOURS_PER_MONTH = 730
-
-const serviceCatalog: { name: string; unitCost: number; category: CostCategory }[] = [
-  { name: 'EC2', unitCost: 120, category: 'Compute' },
-  { name: 'S3', unitCost: 0.023, category: 'Storage' },
-  { name: 'RDS', unitCost: 185, category: 'Database' },
-  { name: 'CloudFront', unitCost: 95.5, category: 'Networking' },
-  { name: 'Route 53', unitCost: 5, category: 'Networking' },
-  { name: 'VPC (NAT Gateway)', unitCost: 45, category: 'Networking' }
-]
+const serviceCatalog: { name: string; unitCost: number; category: CostCategory }[] = (
+  Object.keys(UNIT_COSTS) as string[]
+)
+  .filter((id) => UNIT_COSTS[id] > 0)
+  .map((id) => ({
+    name: SERVICE_LABELS[id] ?? id.toUpperCase(),
+    unitCost: UNIT_COSTS[id],
+    category: SERVICE_CATEGORY[id] ?? 'Compute'
+  }))
 
 function estimateCosts(quantity: number, hours: number, unitCost: number) {
   const monthlyCost = round(quantity * unitCost * (hours / HOURS_PER_MONTH))
@@ -68,10 +101,9 @@ const environmentFilters: { value: 'all' | CostEnvironment; label: string }[] = 
 
 const categoryFilters: { value: 'all' | CostCategory; label: string }[] = [
   { value: 'all', label: 'Todas' },
-  { value: 'Compute', label: 'Compute' },
-  { value: 'Storage', label: 'Storage' },
-  { value: 'Database', label: 'Database' },
-  { value: 'Networking', label: 'Networking' }
+  ...(['Compute', 'Storage', 'Database', 'Networking', 'Security'] as CostCategory[]).map(
+    (category) => ({ value: category, label: COST_CATEGORY_LABELS[category] })
+  )
 ]
 
 export default function Costs() {
@@ -86,7 +118,7 @@ export default function Costs() {
     ? { backgroundColor: '#111827', border: '1px solid #1E293B', borderRadius: '12px', color: '#E5E7EB' }
     : { backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', color: '#1E293B' }
 
-  const { costItems, monthlyHistory, monthlyBudgetLimit } = useCloudStore()
+  const { costItems, monthlyHistory, monthlyBudgetLimit, projects, portfolio } = useCloudStore()
   const [extraItems, setExtraItems] = useState<CostItem[]>([])
 
   const items = useMemo(() => {
@@ -203,11 +235,6 @@ export default function Costs() {
 
   const budgetPercent = Math.min(100, (totalMonthly / monthlyBudgetLimit) * 100)
   const budgetStatus = budgetPercent < 70 ? 'ok' : budgetPercent <= 90 ? 'warn' : 'danger'
-  const budgetBarClasses = {
-    ok: 'bg-success dark:bg-darkSuccess',
-    warn: 'bg-warning dark:bg-darkWarning',
-    danger: 'bg-danger dark:bg-darkDanger'
-  }[budgetStatus]
   const budgetTextClasses = {
     ok: 'text-success dark:text-darkSuccess',
     warn: 'text-warning dark:text-darkWarning',
@@ -221,13 +248,6 @@ export default function Costs() {
   )
   const filteredMonthly = round(filteredCosts.reduce((sum, item) => sum + item.monthlyCost, 0))
   const filteredAnnual = round(filteredCosts.reduce((sum, item) => sum + item.annualCost, 0))
-
-  const filterTabClass = (isActive: boolean) =>
-    `rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
-      isActive
-        ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
-        : 'border-border bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary dark:focus:ring-darkAccentFrom/40'
-    }`
 
   function handleEstimate(event: FormEvent) {
     event.preventDefault()
@@ -253,128 +273,171 @@ export default function Costs() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">Costos</h1>
-        <p className="mt-2 text-textSecondary dark:text-darkTextSecondary">
-          Costos reales derivados del inventario de servidores, editables con estimaciones simuladas.
-        </p>
-      </div>
+    <div className="page">
+      <PageHeader
+        eyebrow="Gestión financiera"
+        title="Costos"
+        description="Costos reales derivados del inventario de servidores y del portafolio de proyectos, editables con estimaciones simuladas."
+        badge={<Badge tone="neutral">{portfolio.resources} recursos</Badge>}
+        actions={<ExportMenu
+          fileName="costos-filtrados"
+          title="Reporte de costos"
+          headers={[
+            'Servicio',
+            'Categoría',
+            'Entorno',
+            'Cantidad',
+            'Costo mensual',
+            'Costo anual',
+            'On-demand',
+            'Reservado'
+          ]}
+          rows={filteredCosts.map((item) => [
+            item.service,
+            item.category,
+            item.environment,
+            item.quantity,
+            item.monthlyCost.toFixed(2),
+            item.annualCost.toFixed(2),
+            (item.onDemandCost ?? 0).toFixed(2),
+            (item.reservedCost ?? 0).toFixed(2)
+          ])}
+          summary={[
+            { label: 'Servicios incluidos', value: filteredCosts.length },
+            { label: 'Subtotal mensual', value: currency.format(filteredMonthly) },
+            { label: 'Subtotal anual', value: currency.format(filteredAnnual) },
+            {
+              label: 'Entorno',
+              value:
+                environmentFilters.find((filter) => filter.value === envFilter)?.label ?? 'Todos'
+            },
+            {
+              label: 'Categoría',
+              value: categoryFilters.find((filter) => filter.value === catFilter)?.label ?? 'Todas'
+            },
+            { label: 'Compromiso', value: activeCommitment.label }
+          ]}
+        />}
+      />
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-          <Calculator className="h-5 w-5 text-primary dark:text-darkPrimary" />
-          Estimación simulada
-          <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-            Simulación
-          </span>
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Selecciona un servicio, cantidad y horas para sobreescribir el costo derivado del inventario.
-        </p>
+      <Section
+        title="Costo por proyecto"
+        description="Mismo desglose que Planificación, Infraestructura y Seguridad: un cambio de recursos se refleja aquí."
+        icon={Wallet}
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {projects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              regionName={
+                regionReferences.find((region) => region.id === project.regionId)?.name ??
+                project.regionId
+              }
+            />
+          ))}
+        </div>
+      </Section>
 
-        <form onSubmit={handleEstimate} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-            Servicio
-            <select
+      <Section
+        title="Estimación simulada"
+        icon={Calculator}
+        badge={<Badge tone="warning">Simulación</Badge>}
+        description="Selecciona un servicio, cantidad y horas para sobreescribir el costo derivado del inventario."
+      >
+        <form
+          onSubmit={handleEstimate}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5"
+        >
+          <Field label="Servicio">
+            <SelectInput
               value={serviceName}
               onChange={(event) => setServiceName(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             >
               {serviceCatalog.map((service) => (
                 <option key={service.name} value={service.name}>
                   {service.name}
                 </option>
               ))}
-            </select>
-          </label>
-          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-            Cantidad
-            <input
+            </SelectInput>
+          </Field>
+          <Field label="Cantidad">
+            <TextInput
               type="number"
               min={1}
               value={quantity}
               onChange={(event) => setQuantity(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             />
-          </label>
-          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-            Horas estimadas
-            <input
+          </Field>
+          <Field label="Horas estimadas">
+            <TextInput
               type="number"
               min={1}
               max={HOURS_PER_MONTH}
               value={hours}
               onChange={(event) => setHours(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             />
-          </label>
-          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-            Entorno
-            <select
+          </Field>
+          <Field label="Entorno">
+            <SelectInput
               value={environment}
               onChange={(event) => setEnvironment(event.target.value as CostEnvironment)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             >
               <option value="dev">Dev</option>
               <option value="staging">Staging</option>
               <option value="production">Producción</option>
-            </select>
-          </label>
-          <button
+            </SelectInput>
+          </Field>
+          <Button
             type="submit"
+            variant="accent"
+            icon={Plus}
             disabled={!preview}
-            className="inline-flex items-center justify-center gap-2 self-end rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40 disabled:cursor-not-allowed disabled:opacity-50"
+            className="self-end"
           >
-            <Plus className="h-4 w-4" />
             Aplicar estimación
-          </button>
+          </Button>
         </form>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-xl bg-background p-4 dark:bg-darkBackground">
-            <p className="text-xs text-textSecondary dark:text-darkTextSecondary">Costo estimado</p>
-            <p className="mt-1 text-xl font-bold text-textPrimary dark:text-darkTextPrimary">
+          <div className="panel-muted">
+            <p className="text-xs text-textSecondary dark:text-darkTextSecondary">
+              Costo estimado
+            </p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-textPrimary dark:text-darkTextPrimary">
               {preview ? currency.format(preview.estimatedCost) : '—'}
             </p>
           </div>
-          <div className="rounded-xl bg-background p-4 dark:bg-darkBackground">
+          <div className="panel-muted">
             <p className="text-xs text-textSecondary dark:text-darkTextSecondary">Costo mensual</p>
-            <p className="mt-1 text-xl font-bold text-textPrimary dark:text-darkTextPrimary">
+            <p className="mt-1 text-xl font-bold tabular-nums text-textPrimary dark:text-darkTextPrimary">
               {preview ? currency.format(preview.monthlyCost) : '—'}
             </p>
           </div>
-          <div className="rounded-xl bg-background p-4 dark:bg-darkBackground">
+          <div className="panel-muted">
             <p className="text-xs text-textSecondary dark:text-darkTextSecondary">Costo anual</p>
-            <p className="mt-1 text-xl font-bold text-textPrimary dark:text-darkTextPrimary">
+            <p className="mt-1 text-xl font-bold tabular-nums text-textPrimary dark:text-darkTextPrimary">
               {preview ? currency.format(preview.annualCost) : '—'}
             </p>
           </div>
         </div>
         <p className="mt-3 text-xs text-textSecondary dark:text-darkTextSecondary">
-          Fórmula simulada: cantidad × tarifa mensual × (horas / {HOURS_PER_MONTH}). El gráfico y las tarjetas se actualizan al aplicar.
+          Fórmula simulada: cantidad × tarifa mensual × (horas / {HOURS_PER_MONTH}). El gráfico y
+          las tarjetas se actualizan al aplicar.
         </p>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <Wallet className="h-5 w-5 text-primary dark:text-darkPrimary" />
-            Presupuesto mensual
-          </h2>
-          <span className={`text-2xl font-bold ${budgetTextClasses}`}>
+      <Section
+        title="Presupuesto mensual"
+        icon={Wallet}
+        actions={
+          <span className={`text-2xl font-bold tabular-nums ${budgetTextClasses}`}>
             {budgetPercent.toFixed(0)}%
           </span>
-        </div>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Consumo del presupuesto configurado con el costo mensual actual.
-        </p>
-        <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-background dark:bg-darkBackground">
-          <div
-            className={`h-full rounded-full transition-all duration-300 ${budgetBarClasses}`}
-            style={{ width: `${budgetPercent}%` }}
-          />
-        </div>
+        }
+        description="Consumo del presupuesto configurado con el costo mensual actual."
+      >
+        <ProgressBar percent={budgetPercent} tone={budgetStatus === 'ok' ? 'success' : budgetStatus === 'warn' ? 'warning' : 'danger'} className="h-3" />
         <p className="mt-3 text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
           {currency.format(totalMonthly)} consumidos de {currency.format(monthlyBudgetLimit)} / mes
         </p>
@@ -387,7 +450,7 @@ export default function Costs() {
               ? 'Acercándose al límite'
               : 'Presupuesto excedido'}
         </p>
-      </section>
+      </Section>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <StatCard
@@ -412,51 +475,49 @@ export default function Costs() {
         />
       </div>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <TrendingUp className="h-5 w-5 text-primary dark:text-darkPrimary" />
-            Variación mensual vs mes anterior
-            <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-              Derivado del inventario
-            </span>
-          </h2>
+      <Section
+        title="Variación mensual vs mes anterior"
+        icon={TrendingUp}
+        badge={<Badge tone="info">Derivado del inventario</Badge>}
+        actions={
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold ${
-              varianceDirection === 'up'
-                ? 'bg-danger/10 text-danger dark:bg-darkDanger/10 dark:text-darkDanger'
-                : 'bg-success/10 text-success dark:bg-darkSuccess/10 dark:text-darkSuccess'
-            }`}
+            className={`badge ${varianceDirection === 'up' ? 'badge-danger' : 'badge-success'}`}
           >
-            {varianceDirection === 'up' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+            {varianceDirection === 'up' ? (
+              <ArrowUpRight className="h-4 w-4" />
+            ) : (
+              <ArrowDownRight className="h-4 w-4" />
+            )}
             {variancePercent.toFixed(1)}%
           </span>
-        </div>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-background p-4 dark:bg-darkBackground">
+        }
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <div className="panel-muted">
             <p className="text-xs text-textSecondary dark:text-darkTextSecondary">Mes actual</p>
-            <p className="mt-1 text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">{currency.format(totalMonthly)}</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-textPrimary dark:text-darkTextPrimary">
+              {currency.format(totalMonthly)}
+            </p>
           </div>
-          <div className="rounded-xl bg-background p-4 dark:bg-darkBackground">
+          <div className="panel-muted">
             <p className="text-xs text-textSecondary dark:text-darkTextSecondary">Mes anterior</p>
-            <p className="mt-1 text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">{currency.format(previousMonthlyCost)}</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-textPrimary dark:text-darkTextPrimary">
+              {currency.format(previousMonthlyCost)}
+            </p>
           </div>
         </div>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <LineChartIcon className="h-5 w-5 text-primary dark:text-darkPrimary" />
-            Proyección de costos a 12 meses
-            <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-              Simulación
-            </span>
-          </h2>
+      <Section
+        title="Proyección de costos a 12 meses"
+        icon={LineChartIcon}
+        badge={<Badge tone="warning">Simulación</Badge>}
+        actions={
           <p className="text-xs text-textSecondary dark:text-darkTextSecondary">
             Histórico + proyección con crecimiento anual estimado del 2% mensual
           </p>
-        </div>
+        }
+      >
         <div className="mt-4 h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={projectionMonths}>
@@ -473,38 +534,32 @@ export default function Costs() {
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <AlertTriangle className="h-5 w-5 text-warning dark:text-darkWarning" />
-            Sugerencias de optimización
-            <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-              Simulación
-            </span>
-          </h2>
-        </div>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Servicios subutilizados que podrían downgradearse para reducir el costo.
-        </p>
+      <Section
+        title="Sugerencias de optimización"
+        icon={AlertTriangle}
+        badge={<Badge tone="warning">Simulación</Badge>}
+        description="Servicios subutilizados que podrían downgradearse para reducir el costo."
+      >
         {optimizationSuggestions.length === 0 ? (
-          <p className="mt-4 rounded-xl bg-background p-4 text-sm text-textSecondary dark:bg-darkBackground dark:text-darkTextSecondary">
+          <p className="panel-muted text-sm text-textSecondary dark:text-darkTextSecondary">
             No se detectaron servicios subutilizados con la configuración actual.
           </p>
         ) : (
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {optimizationSuggestions.map((suggestion) => (
-              <div key={suggestion.id} className="rounded-xl border border-border bg-background p-4 dark:border-darkBorder dark:bg-darkBackground">
+              <div
+                key={suggestion.id}
+                className="panel-muted"
+              >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
-                    {suggestion.service}
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-                    {suggestion.tag}
-                  </span>
+                  <span className="badge badge-solid">{suggestion.service}</span>
+                  <span className="eyebrow">{suggestion.tag}</span>
                 </div>
-                <p className="mt-2 text-sm text-textPrimary dark:text-darkTextPrimary">{suggestion.tip}</p>
+                <p className="mt-2 text-sm text-textPrimary dark:text-darkTextPrimary">
+                  {suggestion.tip}
+                </p>
                 <p className="mt-2 text-xs font-semibold text-success dark:text-darkSuccess">
                   Ahorro potencial: {currency0.format(suggestion.potentialSavings)}/mes
                 </p>
@@ -512,24 +567,15 @@ export default function Costs() {
             ))}
           </div>
         )}
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <Gauge className="h-5 w-5 text-primary dark:text-darkPrimary" />
-            Simulador de Saving Plans
-            <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-              Simulación
-            </span>
-          </h2>
-           <span className="rounded-full border border-transparent bg-gradient-to-r from-accentFrom/10 to-accentTo/10 px-3 py-1 text-sm font-semibold text-accentFrom shadow-[0_0_10px_rgba(124,58,237,0.12)] dark:from-darkAccentFrom/20 dark:to-darkAccentTo/20 dark:text-darkAccentFrom dark:shadow-[0_0_10px_rgba(139,92,246,0.18)]">
-            {activeCommitment.discount}% de descuento
-          </span>
-        </div>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Mueve el control hacia la derecha para comprometer el uso de tus recursos por más tiempo.
-        </p>
+      <Section
+        title="Simulador de Saving Plans"
+        icon={Gauge}
+        badge={<Badge tone="warning">Simulación</Badge>}
+        actions={<Badge tone="accent">{activeCommitment.discount}% de descuento</Badge>}
+        description="Mueve el control hacia la derecha para comprometer el uso de tus recursos por más tiempo."
+      >
 
         <div className="mt-6">
           <input
@@ -610,42 +656,34 @@ export default function Costs() {
             </p>
           </div>
         </div>
-      </section>
+      </Section>
 
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-              Entorno
-            </span>
-            {environmentFilters.map((filter) => (
-              <button
-                key={filter.value}
-                type="button"
-                onClick={() => setEnvFilter(filter.value)}
-                className={filterTabClass(envFilter === filter.value)}
-              >
-                {filter.label}
-              </button>
-            ))}
+      <Section
+        title="Detalle de costos"
+        description="Filtra por entorno y categoría; la exportación respeta los mismos filtros."
+        actions={
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <ChipTabs
+              ariaLabel="Filtrar por entorno"
+              value={envFilter}
+              onChange={setEnvFilter}
+              options={environmentFilters.map((filter) => ({
+                value: filter.value,
+                label: filter.label
+              }))}
+            />
+            <ChipTabs
+              ariaLabel="Filtrar por categoría"
+              value={catFilter}
+              onChange={setCatFilter}
+              options={categoryFilters.map((filter) => ({
+                value: filter.value,
+                label: filter.label
+              }))}
+            />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-              Categoría
-            </span>
-            {categoryFilters.map((filter) => (
-              <button
-                key={filter.value}
-                type="button"
-                onClick={() => setCatFilter(filter.value)}
-                className={filterTabClass(catFilter === filter.value)}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
+        }
+      >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm text-textSecondary dark:text-darkTextSecondary">
             Mostrando {filteredCosts.length} de {discountedCosts.length} servicios
@@ -653,62 +691,36 @@ export default function Costs() {
           <div className="flex flex-wrap items-center gap-3 text-sm">
             <span className="font-semibold text-textPrimary dark:text-darkTextPrimary">
               Subtotal mensual:{' '}
-              <span className="text-primary dark:text-darkPrimary">
+              <span className="tabular-nums text-accentFrom dark:text-darkAccentFrom">
                 {currency0.format(filteredMonthly)}
               </span>
             </span>
             <span className="font-semibold text-textPrimary dark:text-darkTextPrimary">
               Subtotal anual:{' '}
-              <span className="text-primary dark:text-darkPrimary">
+              <span className="tabular-nums text-accentFrom dark:text-darkAccentFrom">
                 {currency0.format(filteredAnnual)}
               </span>
             </span>
-            <ExportMenu
-              fileName="costos-filtrados"
-              title="Reporte de costos"
-              headers={['Servicio', 'Categoría', 'Entorno', 'Cantidad', 'Costo mensual', 'Costo anual', 'On-demand', 'Reservado']}
-              rows={filteredCosts.map((item) => [
-                item.service,
-                item.category,
-                item.environment,
-                item.quantity,
-                item.monthlyCost.toFixed(2),
-                item.annualCost.toFixed(2),
-                (item.onDemandCost ?? 0).toFixed(2),
-                (item.reservedCost ?? 0).toFixed(2)
-              ])}
-              summary={[
-                { label: 'Servicios incluidos', value: filteredCosts.length },
-                { label: 'Subtotal mensual', value: currency.format(filteredMonthly) },
-                { label: 'Subtotal anual', value: currency.format(filteredAnnual) },
-                { label: 'Entorno', value: environmentFilters.find((filter) => filter.value === envFilter)?.label ?? 'Todos' },
-                { label: 'Categoría', value: categoryFilters.find((filter) => filter.value === catFilter)?.label ?? 'Todas' },
-                { label: 'Compromiso', value: activeCommitment.label }
-              ]}
-            />
           </div>
         </div>
 
         {filteredCosts.length === 0 ? (
-          <p className="rounded-2xl border border-border bg-white p-6 text-center text-textSecondary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary">
+          <p className="empty-state">
             No hay servicios que coincidan con los filtros seleccionados.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredCosts.map((item) => (
               <CostCard key={item.id} item={item} />
             ))}
           </div>
         )}
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <h2 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-          Distribución del costo mensual
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Costo mensual por servicio en USD, con el compromiso seleccionado.
-        </p>
+      <Section
+        title="Distribución del costo mensual"
+        description="Costo mensual por servicio en USD, con el compromiso seleccionado."
+      >
         <div className="mt-4 h-80 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -738,7 +750,7 @@ export default function Costs() {
             </PieChart>
           </ResponsiveContainer>
         </div>
-      </section>
+      </Section>
     </div>
   )
 }

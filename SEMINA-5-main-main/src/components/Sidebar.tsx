@@ -1,39 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
-import {
-  Home,
-  ClipboardList,
-  DollarSign,
-  Globe,
-  Shield,
-  Network,
-  Server,
-  Cloud,
-  Settings,
-  X,
-  type LucideIcon
-} from 'lucide-react'
-
-interface NavItem {
-  path: string
-  label: string
-  icon: LucideIcon
-}
+import { Cloud, X } from 'lucide-react'
+import { NAV_GROUPS, NAV_ITEMS } from '../config/navigation'
 
 interface SidebarProps {
   open?: boolean
   onClose?: () => void
 }
-
-const navItems: NavItem[] = [
-  { path: '/dashboard', label: 'Dashboard', icon: Home },
-  { path: '/planning', label: 'Planificación', icon: ClipboardList },
-  { path: '/costs', label: 'Costos', icon: DollarSign },
-  { path: '/infrastructure', label: 'Infraestructura', icon: Globe },
-  { path: '/security', label: 'Seguridad', icon: Shield },
-  { path: '/network', label: 'Red', icon: Network },
-  { path: '/services', label: 'Servicios', icon: Server },
-  { path: '/config', label: 'Configuración', icon: Settings }
-]
 
 export default function Sidebar({ open = false, onClose }: SidebarProps) {
   const { pathname } = useLocation()
@@ -49,18 +21,25 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(15,23,42,0.88))] shadow-[0_0_35px_rgba(15,23,42,0.35)] backdrop-blur-xl transition-transform duration-300 ease-in-out md:fixed md:inset-y-0 md:left-0 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.97),rgba(15,23,42,0.9))] shadow-elevated backdrop-blur-xl transition-transform duration-300 ease-in-out md:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-16 items-center justify-between gap-2 border-b border-white/10 px-6">
-          <div className="flex items-center gap-2">
-            <Cloud className="h-6 w-6 text-primary" strokeWidth={2.2} />
-            <span className="text-lg font-semibold text-white">CloudOps</span>
-          </div>
+        <div className="flex h-16 shrink-0 items-center justify-between gap-2 border-b border-white/10 px-5">
+          <Link to="/dashboard" onClick={onClose} className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-accentFrom to-accentTo shadow-[0_6px_16px_rgba(124,58,237,0.4)]">
+              <Cloud className="h-5 w-5 text-white" strokeWidth={2.2} />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-base font-bold leading-tight text-white">CloudOps</span>
+              <span className="block text-2xs uppercase tracking-wider text-slate-400">
+                Cloud Management
+              </span>
+            </span>
+          </Link>
           <button
             type="button"
-            className="text-slate-400 transition-colors hover:text-white md:hidden"
+            className="btn btn-ghost h-9 w-9 p-0 text-slate-400 hover:text-white md:hidden"
             onClick={onClose}
             aria-label="Cerrar menú"
           >
@@ -68,29 +47,53 @@ export default function Sidebar({ open = false, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {navItems.map(({ path, label, icon: Icon }) => {
-            const isActive = pathname === path
+        <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+          {NAV_GROUPS.map((group) => {
+            const items = NAV_ITEMS.filter((item) => item.group === group.key)
+            if (items.length === 0) return null
+
             return (
-              <Link
-                key={path}
-                to={path}
-                onClick={onClose}
-                className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
-                  isActive
-                    ? 'bg-gradient-to-r from-violet-500/90 via-fuchsia-500/90 to-pink-500/90 text-white shadow-[0_12px_30px_rgba(168,85,247,0.35)]'
-                    : 'text-slate-300 hover:bg-white/7 hover:text-white'
-                }`}
-              >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span>{label}</span>
-              </Link>
+              <div key={group.key}>
+                <p className="px-3 pb-2 text-2xs font-semibold uppercase tracking-widest text-slate-500">
+                  {group.label}
+                </p>
+                <ul className="space-y-1">
+                  {items.map(({ path, label, icon: Icon }) => {
+                    const isActive = pathname === path
+                    return (
+                      <li key={path}>
+                        <Link
+                          to={path}
+                          onClick={onClose}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={`relative flex items-center gap-3 rounded-control px-3 py-2.5 text-sm font-medium transition-all ${
+                            isActive
+                              ? 'bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_10px_24px_rgba(124,58,237,0.35)]'
+                              : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          <Icon
+                            className={`h-[18px] w-[18px] shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`}
+                          />
+                          <span>{label}</span>
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
             )
           })}
         </nav>
 
-        <div className="border-t border-white/10 px-6 py-4">
-          <p className="text-xs text-slate-500">CloudOps Console</p>
+        <div className="shrink-0 border-t border-white/10 px-5 py-4">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-2xs uppercase tracking-wider text-slate-500">Consola CloudOps</p>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-success/40 bg-success/15 px-2 py-0.5 text-2xs font-semibold text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+              En línea
+            </span>
+          </div>
         </div>
       </aside>
     </>

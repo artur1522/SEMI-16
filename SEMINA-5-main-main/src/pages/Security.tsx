@@ -22,6 +22,7 @@ import {
   type LucideIcon
 } from 'lucide-react'
 import SecurityScore from '../components/SecurityScore'
+import { Badge, Button, ChipTabs, PageHeader, Section } from '../components/ui'
 import { usePreferences } from '../hooks/usePreferences'
 import { useCloudStore } from '../store/cloudStore'
 
@@ -350,7 +351,7 @@ export default function Security() {
         detail: nextValue
           ? 'El control de seguridad fue marcado como cumplido y el score recalculó.'
           : 'El control fue desmarcado y requiere revisión para mantener el nivel recomendado.',
-        severity: nextValue ? 'info' : 'warning',
+        severity: (nextValue ? 'info' : 'warning') as SecurityEvent['severity'],
         actor: 'Hardening'
       },
       ...previous
@@ -390,26 +391,23 @@ export default function Security() {
   }
 
   return (
-    <div className="space-y-8 bg-slate-50 dark:bg-darkBackground -m-4 p-4 sm:-m-6 sm:p-6 lg:-m-8 lg:p-8">
-      <div>
-        <h1 className="text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-          Security Hub
-        </h1>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Panel central de controles, responsabilidad compartida y auditoría de accesos.
-        </p>
-      </div>
+    <div className="page">
+      <PageHeader
+        eyebrow="Postura de seguridad"
+        title="Security Hub"
+        description="Panel central de controles, responsabilidad compartida y auditoría de accesos."
+        badge={<Badge tone={securityScore >= 80 ? 'success' : securityScore >= 50 ? 'warning' : 'danger'} dot>
+          Score {securityScore}%
+        </Badge>}
+      />
 
       <SecurityScore score={hardeningScore} threats={3} mfaCoverage={72} patches={3} />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-darkCard">
-              <ListChecks className="h-4 w-4 text-primary dark:text-darkPrimary" />
-            </span>
-            Checklist de Hardening
-          </h2>
+      <Section
+        title="Checklist de Hardening"
+        icon={ListChecks}
+        description="Marca los controles implementados: el Security Score se recalcula automáticamente."
+        actions={
           <div className="flex items-center gap-3">
             <span className="text-sm text-textSecondary dark:text-darkTextSecondary">
               {hardeningDoneCount}/{hardeningItems.length} completados
@@ -418,12 +416,9 @@ export default function Security() {
               <div className="h-full rounded-full bg-primary transition-all dark:bg-darkPrimary" style={{ width: `${hardeningScore}%` }} />
             </div>
           </div>
-        </div>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Marca los controles implementados: el Security Score se recalcula automáticamente.
-        </p>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        }
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {hardeningItems.map((item) => {
             const checked = Boolean(securityControls[item.id])
             return (
@@ -456,25 +451,15 @@ export default function Security() {
             )
           })}
         </div>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-darkCard">
-              <History className="h-4 w-4 text-primary dark:text-darkPrimary" />
-            </span>
-            Historial de Eventos de Seguridad
-            <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-              Auditoría
-            </span>
-          </h2>
-        </div>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Timeline específico de auditoría de seguridad, separado del feed del dashboard.
-        </p>
-
-        <ol className="mt-6 relative ml-2 border-l-2 border-slate-200 pl-6 dark:border-darkBorder">
+      <Section
+        title="Historial de Eventos de Seguridad"
+        icon={History}
+        description="Timeline específico de auditoría de seguridad, separado del feed del dashboard."
+        badge={<Badge tone="warning">Auditoría</Badge>}
+      >
+        <ol className="relative ml-2 border-l-2 border-slate-200 pl-6 dark:border-darkBorder">
           {securityHistory.map((event) => (
             <li key={event.id} className="relative pb-6 last:pb-0">
               <span className={`absolute -left-[31px] top-1 h-3.5 w-3.5 rounded-full border-2 border-white dark:border-darkCard ${severityDotStyles[event.severity]}`} />
@@ -492,33 +477,20 @@ export default function Security() {
             </li>
           ))}
         </ol>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-darkCard">
-              <RefreshCw className="h-4 w-4 text-primary dark:text-darkPrimary" />
-            </span>
-            Rotación de Credenciales
-            <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-              Simulado
-            </span>
-          </h2>
-          <button
-            type="button"
-            onClick={handleRotateAll}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_14px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.24)]"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
+      <Section
+        title="Rotación de Credenciales"
+        icon={RefreshCw}
+        description="Días restantes antes de la expiración de cada credencial. Rota individualmente o en lote."
+        badge={<Badge tone="warning">Simulado</Badge>}
+        actions={
+          <Button variant="accent" size="sm" icon={RefreshCw} onClick={handleRotateAll}>
             Rotar todas
-          </button>
-        </div>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Días restantes antes de la expiración de cada credencial. Rota individualmente o en lote.
-        </p>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          </Button>
+        }
+      >
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {credentials.map((credential) => {
             const nextRotation = new Date(credential.lastRotated.getTime() + credential.maxAgeDays * 24 * 60 * 60 * 1000)
             const remaining = daysUntil(nextRotation)
@@ -526,7 +498,7 @@ export default function Security() {
             const warning = !expired && remaining <= 14
             const pct = Math.min(100, Math.max(0, Math.round(((credential.maxAgeDays - remaining) / credential.maxAgeDays) * 100)))
             return (
-              <div key={credential.id} className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-background p-4 dark:border-darkBorder dark:bg-darkBackground">
+              <div key={credential.id} className="card-tile flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
                     <Key className="h-3.5 w-3.5 text-primary dark:text-darkPrimary" />
@@ -550,38 +522,23 @@ export default function Security() {
                     <Timer className="h-3.5 w-3.5" />
                     {expired ? 'Expira hoy' : timeUnit === 'hours' ? `${remaining * 24} horas restantes` : `${remaining} días restantes`}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => rotateCredential(credential.id)}
-                    className="inline-flex items-center gap-1 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-2.5 py-1 text-xs font-semibold text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/30"
-                  >
-                    <RefreshCw className="h-3 w-3" />
+                  <Button variant="accent" size="sm" icon={RefreshCw} onClick={() => rotateCredential(credential.id)}>
                     Rotar ahora
-                  </button>
+                  </Button>
                 </div>
               </div>
             )
           })}
         </div>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-darkCard">
-              <Lock className="h-4 w-4 text-primary dark:text-darkPrimary" />
-            </span>
-            Políticas de Contraseña
-            <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-              Simulado
-            </span>
-          </h2>
-        </div>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Estado de cumplimiento de la política de contraseñas de la cuenta. Marca los checks verificados.
-        </p>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <Section
+        title="Políticas de Contraseña"
+        icon={Lock}
+        description="Estado de cumplimiento de la política de contraseñas de la cuenta. Marca los checks verificados."
+        badge={<Badge tone="warning">Simulado</Badge>}
+      >
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {initialPasswordPolicies.map((policy, index) => {
             const checked = policyChecks[`pp${index}`]
             return (
@@ -616,29 +573,22 @@ export default function Security() {
             )
           })}
         </div>
-      </section>
+      </Section>
 
-      <section>
-        <h2 className="flex items-center gap-2 text-base font-semibold text-textPrimary dark:text-darkTextPrimary">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-darkCard">
-            <Cloud className="h-4 w-4 text-primary dark:text-darkPrimary" />
-          </span>
-          Responsabilidad Compartida
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Modelo de responsabilidad de seguridad en la nube según el alcance de cada parte.
-        </p>
-
-        <div className="mt-4 grid gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 dark:border-darkBorder dark:bg-darkCard">
+      <Section
+        title="Responsabilidad Compartida"
+        icon={Cloud}
+        description="Modelo de responsabilidad de seguridad en la nube según el alcance de cada parte."
+        bodyClassName="pt-0"
+      >
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="card-tile">
             <div className="flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
                 <Cloud className="h-4 w-4 text-primary dark:text-darkPrimary" />
                 AWS Managed
               </h3>
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
-                Gestionado por AWS
-              </span>
+              <Badge tone="info">Gestionado por AWS</Badge>
             </div>
             <ul className="mt-4 space-y-3">
               {awsManaged.map((item) => (
@@ -666,15 +616,13 @@ export default function Security() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-darkBorder dark:bg-darkCard">
+          <div className="card-tile">
             <div className="flex items-center justify-between">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
                 <UserCog className="h-4 w-4 text-primary dark:text-darkPrimary" />
                 Customer Managed
               </h3>
-              <span className="rounded-full bg-warning/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-                Tu responsabilidad
-              </span>
+              <Badge tone="warning">Tu responsabilidad</Badge>
             </div>
             <ul className="mt-4 space-y-3">
               {customerManaged.map((item) => {
@@ -701,36 +649,25 @@ export default function Security() {
                         {item.status === 'inactive' && 'Crítico'}
                       </span>
                     </div>
-                    <button
-                      type="button"
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/30"
-                    >
-                      <Icon className="h-3.5 w-3.5" />
+                    <Button variant="accent" size="sm" icon={Icon} className="mt-3">
                       {item.actionLabel}
                       <ArrowRight className="h-3 w-3 opacity-50" />
-                    </button>
+                    </Button>
                   </li>
                 )
               })}
             </ul>
           </div>
         </div>
-      </section>
+      </Section>
 
-      <section>
-        <h2 className="flex items-center gap-2 text-base font-semibold text-textPrimary dark:text-darkTextPrimary">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-darkCard">
-            <ShieldCheck className="h-4 w-4 text-primary dark:text-darkPrimary" />
-          </span>
-          Cumplimiento de Buenas Prácticas
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Estado actual de las políticas de seguridad y controles de cumplimiento activos.
-        </p>
-
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-darkBorder dark:bg-darkCard">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px] text-sm">
+      <Section
+        title="Cumplimiento de Buenas Prácticas"
+        icon={ShieldCheck}
+        description="Estado actual de las políticas de seguridad y controles de cumplimiento activos."
+      >
+        <div className="table-wrap">
+          <table className="data-table w-full min-w-[800px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 dark:border-darkBorder dark:bg-darkBackground">
                   <th className="py-3 pl-6 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
@@ -779,16 +716,13 @@ export default function Security() {
                       </span>
                     </td>
                     <td className="py-3.5 pr-6 text-right">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/30"
-                      >
+                      <button type="button" className="btn btn-accent btn-sm">
                         {row.statusTone === 'success' ? (
-                          <Eye className="h-3.5 w-3.5 text-textSecondary dark:text-darkTextSecondary" />
+                          <Eye className="h-3.5 w-3.5" />
                         ) : row.statusTone === 'danger' ? (
-                          <Wrench className="h-3.5 w-3.5 text-textSecondary dark:text-darkTextSecondary" />
+                          <Wrench className="h-3.5 w-3.5" />
                         ) : (
-                          <Search className="h-3.5 w-3.5 text-textSecondary dark:text-darkTextSecondary" />
+                          <Search className="h-3.5 w-3.5" />
                         )}
                         {row.action}
                       </button>
@@ -798,44 +732,30 @@ export default function Security() {
               </tbody>
             </table>
           </div>
-        </div>
-      </section>
+      </Section>
 
-      <section>
-        <h2 className="flex items-center gap-2 text-base font-semibold text-textPrimary dark:text-darkTextPrimary">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-darkCard">
-            <Key className="h-4 w-4 text-primary dark:text-darkPrimary" />
-          </span>
-          Auditoría de roles IAM
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Evalúa políticas de acceso simulando permisos sobre recursos concretos de AWS.
-        </p>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+      <Section
+        title="Auditoría de roles IAM"
+        icon={Key}
+        description="Evalúa políticas de acceso simulando permisos sobre recursos concretos de AWS."
+      >
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
             Recurso a probar
           </span>
-          {auditResources.map((resource) => (
-            <button
-              key={resource.id}
-              type="button"
-              onClick={() => handleResourceChange(resource.id)}
-className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
-                 resourceId === resource.id
-                   ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
-                   : 'border-slate-200 bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary dark:focus:ring-darkAccentFrom/40'
-               }`}
-            >
-              <span className="font-mono">{resource.permission}</span>
-              <span className="ml-1 opacity-60">({resource.label})</span>
-            </button>
-          ))}
+          <ChipTabs
+            ariaLabel="Recurso a probar"
+            options={auditResources.map((resource) => ({
+              value: resource.id,
+              label: `${resource.permission} (${resource.label})`
+            }))}
+            value={resourceId}
+            onChange={handleResourceChange}
+          />
         </div>
 
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-darkBorder dark:bg-darkCard">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-sm">
+        <div className="table-wrap mt-4">
+          <table className="data-table w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 dark:border-darkBorder dark:bg-darkBackground">
                   <th className="py-3 pl-6 pr-4 text-left text-[11px] font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
@@ -911,23 +831,14 @@ className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-a
                         </td>
                         <td className="py-3.5 pr-6 text-right">
                           <div className="flex flex-col items-end gap-1.5">
-                            <button
-                              type="button"
+                            <Button
+                              variant="accent"
+                              size="sm"
+                              icon={isExpanded ? ChevronDown : Play}
                               onClick={() => handleSimulate(user.id)}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_14px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40"
                             >
-                              {isExpanded ? (
-                                <>
-                                  <ChevronDown className="h-3.5 w-3.5 rotate-180 transition-transform" />
-                                  Cerrar
-                                </>
-                              ) : (
-                                <>
-                                  <Play className="h-3.5 w-3.5" />
-                                  Simular acceso
-                                </>
-                              )}
-                            </button>
+                              {isExpanded ? 'Cerrar' : 'Simular acceso'}
+                            </Button>
                           </div>
                         </td>
                       </tr>
@@ -962,7 +873,6 @@ className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-a
               </tbody>
             </table>
           </div>
-        </div>
 
         <p className="mt-3 text-xs text-textSecondary dark:text-darkTextSecondary">
           Simulación de acceso: <span className="font-mono">{activeResource.permission}</span> sobre{' '}
@@ -970,7 +880,7 @@ className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-a
           de permisos con comodines (<span className="font-mono">{'*'}</span>) y el precedente del
           Deny explícito sobre Allow.
         </p>
-      </section>
+      </Section>
     </div>
   )
 }

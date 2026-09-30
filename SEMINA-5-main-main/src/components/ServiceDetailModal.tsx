@@ -169,7 +169,7 @@ export default function ServiceDetailModal({ service, popularity = 0, onClose }:
               href={service.docsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3.5 py-2 text-sm font-semibold text-white shadow-[0_0_14px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40"
+              className="btn btn-accent"
             >
               Ver documentación oficial
               <ExternalLink className="h-4 w-4" />

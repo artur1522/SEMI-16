@@ -1,46 +1,50 @@
-import { useLocation } from 'react-router-dom'
-import { Moon, Search, Sun, User, Settings } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { ChevronRight, Moon, Search, Settings, Sun } from 'lucide-react'
 import { useTheme } from '../hooks/useTheme'
+import { navItemByPath } from '../config/navigation'
 import NotificationBell from './NotificationBell'
-
-const titles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/planning': 'Planificación Cloud',
-  '/costs': 'Costos',
-  '/infrastructure': 'Infraestructura Global',
-  '/security': 'Seguridad',
-  '/network': 'Arquitectura de Red',
-  '/services': 'Servicios AWS',
-  '/config': 'Configuración'
-}
 
 export default function Header() {
   const { pathname } = useLocation()
   const { theme, toggleTheme } = useTheme()
-  const title = titles[pathname] ?? 'CloudOps'
+  const current = navItemByPath(pathname)
 
   return (
-    <header className="flex h-16 w-full items-center justify-between gap-4">
-      <h1 className="truncate text-lg font-semibold text-textPrimary dark:text-darkTextPrimary sm:text-xl">
-        {title}
-      </h1>
+    <header className="flex h-16 w-full min-w-0 items-center justify-between gap-4">
+      <nav aria-label="Ruta" className="flex min-w-0 items-center gap-1.5 text-sm">
+        <span className="hidden font-semibold text-textSecondary sm:inline dark:text-darkTextSecondary">
+          CloudOps
+        </span>
+        <ChevronRight
+          className="hidden h-4 w-4 shrink-0 text-textSecondary/50 sm:inline dark:text-darkTextSecondary/50"
+          aria-hidden="true"
+        />
+        <span className="truncate font-semibold text-textPrimary dark:text-darkTextPrimary">
+          {current?.shortTitle ?? 'CloudOps'}
+        </span>
+        {current && (
+          <span className="hidden truncate text-xs text-textSecondary lg:inline dark:text-darkTextSecondary">
+            {current.eyebrow}
+          </span>
+        )}
+      </nav>
 
-      <div className="flex shrink-0 items-center gap-3">
+      <div className="flex shrink-0 items-center gap-2">
         <div className="relative hidden sm:block">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textSecondary dark:text-darkTextSecondary" />
           <input
             id="global-search"
             type="text"
-            placeholder="Buscar...  ( / )"
-            className="w-40 rounded-xl border border-border bg-white py-2 pl-9 pr-3 text-sm text-textPrimary placeholder:text-textSecondary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20 lg:w-64"
+            placeholder="Buscar…  ( / )"
+            aria-label="Buscar en CloudOps"
+            className="input w-40 pl-9 lg:w-64"
           />
         </div>
 
         <button
           type="button"
           onClick={toggleTheme}
-           className="relative flex h-10 w-10 items-center justify-center rounded-full bg-accentFrom/10 text-accentFrom transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 hover:bg-gradient-to-r hover:from-accentFrom/15 hover:to-accentTo/15 dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom dark:hover:from-darkAccentFrom/20 dark:hover:to-darkAccentTo/20 dark:focus:ring-2 dark:focus:ring-darkAccentFrom/30"
+          className="btn btn-ghost relative h-10 w-10 rounded-full p-0 text-accentFrom hover:text-accentFrom dark:text-darkAccentFrom"
           aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'}
         >
           <Sun
@@ -59,19 +63,19 @@ export default function Header() {
 
         <Link
           to="/config"
-           className="flex h-10 w-10 items-center justify-center rounded-full bg-accentFrom/10 text-accentFrom transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 hover:bg-gradient-to-r hover:from-accentFrom/15 hover:to-accentTo/15 dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom dark:hover:from-darkAccentFrom/20 dark:hover:to-darkAccentTo/20 dark:focus:ring-2 dark:focus:ring-darkAccentFrom/30"
+          className="btn btn-ghost h-10 w-10 rounded-full p-0 text-accentFrom hover:text-accentFrom dark:text-darkAccentFrom"
           aria-label="Configuración"
         >
           <Settings className="h-5 w-5" />
         </Link>
 
-        <button
-          type="button"
-           className="flex h-10 w-10 items-center justify-center rounded-full bg-accentFrom/10 text-accentFrom transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 hover:bg-gradient-to-r hover:from-accentFrom/15 hover:to-accentTo/15 dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom dark:hover:from-darkAccentFrom/20 dark:hover:to-darkAccentTo/20 dark:focus:ring-2 dark:focus:ring-darkAccentFrom/30"
+        <span
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-accentFrom to-accentTo text-xs font-bold text-white shadow-[0_6px_16px_rgba(124,58,237,0.35)]"
           aria-label="Perfil de usuario"
+          title="Ana Martínez · Administradora"
         >
-          <User className="h-5 w-5" />
-        </button>
+          AM
+        </span>
       </div>
     </header>
   )

@@ -1,37 +1,41 @@
 import { TrendingDown, TrendingUp, type LucideIcon } from 'lucide-react'
-import { useTheme } from '../hooks/useTheme'
 
 interface StatCardProps {
   title: string
   value: string
   icon: LucideIcon
   trend?: string
+  /** Tono del icono: `info` (por defecto) o `accent` para destacar. */
+  iconTone?: 'primary' | 'accent' | 'success' | 'warning'
+  hint?: string
 }
 
-export default function StatCard({ title, value, icon: Icon, trend }: StatCardProps) {
-  const { theme } = useTheme()
-  const isDark = theme === 'dark'
-  const isPositiveTrend = trend?.startsWith('+')
+const ICON_TONE: Record<string, string> = {
+  primary: 'bg-primary/10 text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary',
+  accent:
+    'bg-accentFrom/10 text-accentFrom dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom',
+  success: 'bg-success/10 text-success dark:bg-darkSuccess/10 dark:text-darkSuccess',
+  warning: 'bg-warning/10 text-warning dark:bg-darkWarning/10 dark:text-darkWarning'
+}
+
+export default function StatCard({
+  title,
+  value,
+  icon: Icon,
+  trend,
+  iconTone = 'primary',
+  hint
+}: StatCardProps) {
+  const isPositiveTrend = trend?.startsWith('+') || trend?.startsWith('↑')
 
   return (
-    <div
-      className="group flex items-center justify-between gap-4 rounded-2xl border border-border bg-white p-5 shadow-sm transition-all duration-200 hover:border-accentFrom/40 hover:shadow-[0_0_0_1px_rgba(124,58,237,0.18),0_12px_24px_rgba(124,58,237,0.08)] dark:border-darkBorder dark:bg-darkCard dark:hover:border-darkAccentFrom/50 dark:hover:shadow-[0_0_0_1px_rgba(139,92,246,0.2),0_12px_24px_rgba(139,92,246,0.12)]"
-      style={{
-        backgroundImage: isDark
-          ? 'linear-gradient(135deg, rgba(139,92,246,0.06), rgba(236,72,153,0.04), rgba(26,20,51,0.96))'
-          : 'linear-gradient(135deg, rgba(124,58,237,0.05), rgba(236,72,153,0.04), rgba(255,255,255,0.98))'
-      }}
-    >
+    <article className="card-tile flex items-center justify-between gap-4">
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-textSecondary dark:text-darkTextSecondary">
-          {title}
-        </p>
-        <p className="mt-1 truncate text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-          {value}
-        </p>
+        <p className="metric-label">{title}</p>
+        <p className="metric-value">{value}</p>
         {trend && (
           <p
-            className={`mt-1 flex items-center gap-1 text-xs font-medium ${
+            className={`mt-1 flex items-center gap-1 text-xs font-semibold ${
               isPositiveTrend
                 ? 'text-success dark:text-darkSuccess'
                 : 'text-danger dark:text-darkDanger'
@@ -45,10 +49,15 @@ export default function StatCard({ title, value, icon: Icon, trend }: StatCardPr
             {trend}
           </p>
         )}
+        {hint && !trend && (
+          <p className="mt-1 truncate text-xs text-textSecondary dark:text-darkTextSecondary">
+            {hint}
+          </p>
+        )}
       </div>
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/10 dark:bg-darkPrimary/10 dark:text-darkPrimary dark:ring-darkPrimary/10">
-        <Icon className="h-6 w-6" />
+      <div className={`icon-tile ${ICON_TONE[iconTone]}`}>
+        <Icon className="h-5 w-5" />
       </div>
-    </div>
+    </article>
   )
 }

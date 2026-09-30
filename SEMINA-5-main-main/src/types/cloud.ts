@@ -1,7 +1,7 @@
 export type ServiceStatus = 'active' | 'warning' | 'inactive'
 export type RegionStatus = 'operational' | 'degraded' | 'down'
 export type ProposalStatus = 'borrador' | 'en_revision' | 'aprobada'
-export type CostCategory = 'Compute' | 'Storage' | 'Database' | 'Networking'
+export type CostCategory = 'Compute' | 'Storage' | 'Database' | 'Networking' | 'Security'
 export type CostEnvironment = 'dev' | 'staging' | 'production'
 
 export interface Service {
@@ -71,6 +71,8 @@ export interface CloudServer {
   name: string
   serviceId: string
   regionId: string
+  /** Proyecto propietario del recurso (vincula con `cloudOpsData`). */
+  projectId?: string
   environment: CostEnvironment
   status: ServiceStatus
   addedAt: number

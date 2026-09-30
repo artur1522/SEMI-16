@@ -1,14 +1,35 @@
-import { useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
-import { Check, ChevronDown, Columns, Copy, Download, Flag, Lightbulb, Plus, Rocket, Timer, Trash2 } from 'lucide-react'
-import type {
-  CloudProposal,
-  ProposalPriority,
-  ProposalStatus
-} from '../types/cloud'
+import {
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode
+} from 'react'
+import {
+  Check,
+  ChevronDown,
+  Columns,
+  Copy,
+  Flag,
+  Lightbulb,
+  Plus,
+  Rocket,
+  Timer,
+  Trash2
+} from 'lucide-react'
+import type { CloudProposal, ProposalPriority, ProposalStatus } from '../types/cloud'
 import { awsServices } from '../data/awsServices'
 import { regionReferences } from '../data/regions'
 import { suggestArchitectures, type ArchitectureSuggestion } from '../data/architecture'
 import { useCloudStore } from '../store/cloudStore'
+import {
+  AVAILABILITY_META,
+  PRIORITY_META,
+  STATUS_META,
+  type AvailabilityLevel
+} from '../data/cloudOpsData'
+import { Badge, Button, ChipTabs, Field, PageHeader, Section, SelectInput, TextArea, TextInput } from '../components/ui'
 
 const currency = new Intl.NumberFormat('es-ES', {
   style: 'currency',
@@ -16,42 +37,17 @@ const currency = new Intl.NumberFormat('es-ES', {
   maximumFractionDigits: 0
 })
 
-const availabilityOptions = [
-  { value: 'basica', label: 'Básica', sla: '99.9%' },
-  { value: 'alta', label: 'Alta', sla: '99.99%' },
-  { value: 'critica', label: 'Crítica', sla: '99.999%' }
-]
-
-const availabilityStyles: Record<string, string> = {
-  basica: 'bg-success/10 text-success dark:bg-darkSuccess/10 dark:text-darkSuccess',
-  alta: 'bg-warning/10 text-warning dark:bg-darkWarning/10 dark:text-darkWarning',
-  critica: 'bg-danger/10 text-danger dark:bg-darkDanger/10 dark:text-darkDanger'
-}
-
 const statusOptions: { value: ProposalStatus; label: string }[] = [
   { value: 'borrador', label: 'Borrador' },
   { value: 'en_revision', label: 'En revisión' },
   { value: 'aprobada', label: 'Aprobada' }
 ]
 
-const statusStyles: Record<ProposalStatus, string> = {
-  borrador:
-    'bg-textSecondary/10 text-textSecondary dark:bg-darkTextSecondary/10 dark:text-darkTextSecondary',
-  en_revision: 'bg-warning/10 text-warning dark:bg-darkWarning/10 dark:text-darkWarning',
-  aprobada: 'bg-success/10 text-success dark:bg-darkSuccess/10 dark:text-darkSuccess'
-}
-
 const priorityOptions: { value: ProposalPriority; label: string }[] = [
   { value: 'alta', label: 'Alta' },
   { value: 'media', label: 'Media' },
   { value: 'baja', label: 'Baja' }
 ]
-
-const priorityStyles: Record<ProposalPriority, string> = {
-  alta: 'bg-danger/10 text-danger dark:bg-darkDanger/10 dark:text-darkDanger',
-  media: 'bg-warning/10 text-warning dark:bg-darkWarning/10 dark:text-darkWarning',
-  baja: 'bg-success/10 text-success dark:bg-darkSuccess/10 dark:text-darkSuccess'
-}
 
 const timelineOptions: { value: string; label: string }[] = [
   { value: 'basica', label: '4–6 semanas (~5 semanas)' },
@@ -157,13 +153,6 @@ const emptyForm: FormState = {
 
 type FormErrors = Partial<Record<keyof FormState, string>>
 
-const inputClass = 'w-full rounded-md border border-border bg-white px-3 py-1.5 text-xs text-textPrimary placeholder:text-textSecondary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20'
-const labelClass = 'mb-1 block text-[11px] font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary'
-
-function fieldClass(hasError: boolean) {
-  return `${inputClass} ${hasError ? 'border-danger dark:border-darkDanger' : 'border-border dark:border-darkBorder'}`
-}
-
 function regionName(id: string) {
   return regionReferences.find((region) => region.id === id)?.name ?? id
 }
@@ -173,15 +162,7 @@ function serviceName(id: string) {
 }
 
 function availabilitySla(value: string) {
-  return availabilityOptions.find((option) => option.value === value)?.sla ?? '—'
-}
-
-function statusLabel(value: ProposalStatus) {
-  return statusOptions.find((option) => option.value === value)?.label ?? value
-}
-
-function priorityLabel(value: ProposalPriority) {
-  return priorityOptions.find((option) => option.value === value)?.label ?? value
+  return AVAILABILITY_META[value as AvailabilityLevel]?.sla ?? '—'
 }
 
 function estimationRange(availabilityLevel: string) {
@@ -208,8 +189,27 @@ function formatDate(iso: string) {
   }).format(date)
 }
 
+function StatusPill({ status }: { status: ProposalStatus }) {
+  const meta = STATUS_META[status]
+  return (
+    <Badge tone={meta.tone} dot>
+      {meta.label}
+    </Badge>
+  )
+}
+
+function PriorityPill({ priority }: { priority: ProposalPriority }) {
+  const meta = PRIORITY_META[priority]
+  return (
+    <Badge tone={meta.tone}>
+      <Flag className="h-3 w-3" aria-hidden="true" />
+      {meta.label}
+    </Badge>
+  )
+}
+
 export default function Planning() {
-  const { proposals, addProposal, removeProposal } = useCloudStore()
+  const { proposals, addProposal, removeProposal, projects, portfolio } = useCloudStore()
   const [form, setForm] = useState<FormState>(emptyForm)
   const [errors, setErrors] = useState<FormErrors>({})
 
@@ -218,9 +218,17 @@ export default function Planning() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [detailId, setDetailId] = useState<string | null>(null)
 
-  const suggestions = useMemo(() => suggestArchitectures(form.appType, Number(form.estimatedUsers), form.availabilityLevel), [form])
+  const suggestions = useMemo(
+    () => suggestArchitectures(form.appType, Number(form.estimatedUsers), form.availabilityLevel),
+    [form]
+  )
   const suggestionsFallback = useMemo(
-    () => suggestArchitectures(form.appType || 'sitio web', form.estimatedUsers ? Number(form.estimatedUsers) : 1000, form.availabilityLevel || 'alta'),
+    () =>
+      suggestArchitectures(
+        form.appType || 'sitio web',
+        form.estimatedUsers ? Number(form.estimatedUsers) : 1000,
+        form.availabilityLevel || 'alta'
+      ),
     [form]
   )
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
@@ -228,7 +236,10 @@ export default function Planning() {
 
   const openSuggestions = () => {
     setSuggestionsOpen(true)
-    setTimeout(() => suggestionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+    setTimeout(
+      () => suggestionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      50
+    )
   }
 
   const applySuggestion = (sugg: ArchitectureSuggestion) => {
@@ -242,21 +253,21 @@ export default function Planning() {
     () =>
       proposals
         .filter((p) => statusFilter === 'todas' || p.status === statusFilter)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+        .sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ),
     [proposals, statusFilter]
   )
 
-  const filterCounts = useMemo(() => ({
-    todas: proposals.length,
-    borrador: proposals.filter((p) => p.status === 'borrador').length,
-    en_revision: proposals.filter((p) => p.status === 'en_revision').length,
-    aprobada: proposals.filter((p) => p.status === 'aprobada').length
-  }), [proposals])
-
-  const filterTabs: { value: StatusFilter; label: string }[] = [
-    { value: 'todas', label: 'Todas' },
-    ...statusOptions.map((o) => ({ value: o.value as StatusFilter, label: o.label }))
-  ]
+  const filterCounts = useMemo(
+    () => ({
+      todas: proposals.length,
+      borrador: proposals.filter((p) => p.status === 'borrador').length,
+      en_revision: proposals.filter((p) => p.status === 'en_revision').length,
+      aprobada: proposals.filter((p) => p.status === 'aprobada').length
+    }),
+    [proposals]
+  )
 
   const selectedProposals = useMemo(
     () => proposals.filter((proposal) => selectedIds.includes(proposal.id)),
@@ -264,16 +275,32 @@ export default function Planning() {
   )
 
   const detailProposal = proposals.find((p) => p.id === detailId) ?? null
-  const detailSuggestion = detailProposal ? suggestArchitectures(detailProposal.appType, detailProposal.estimatedUsers, detailProposal.availabilityLevel)[0] ?? null : null
+  const detailSuggestion = detailProposal
+    ? suggestArchitectures(
+        detailProposal.appType,
+        detailProposal.estimatedUsers,
+        detailProposal.availabilityLevel
+      )[0] ?? null
+    : null
 
-  function handleChange(e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+  function handleChange(
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) {
     const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: name === 'status' ? (value as ProposalStatus) : value }))
+    setForm((prev) => ({
+      ...prev,
+      [name]: name === 'status' ? (value as ProposalStatus) : value
+    }))
     setErrors((prev) => ({ ...prev, [name]: undefined }))
   }
 
   function handleServiceToggle(id: string) {
-    setForm((prev) => ({ ...prev, selectedServices: prev.selectedServices.includes(id) ? prev.selectedServices.filter((s) => s !== id) : [...prev.selectedServices, id] }))
+    setForm((prev) => ({
+      ...prev,
+      selectedServices: prev.selectedServices.includes(id)
+        ? prev.selectedServices.filter((s) => s !== id)
+        : [...prev.selectedServices, id]
+    }))
   }
 
   function validate(cur: FormState) {
@@ -282,8 +309,10 @@ export default function Planning() {
     if (!cur.appType.trim()) next.appType = 'Ingresa el tipo.'
     if (!cur.description.trim()) next.description = 'Describe la solución.'
     if (!cur.region) next.region = 'Selecciona región.'
-    if (!cur.estimatedUsers || Number(cur.estimatedUsers) <= 0) next.estimatedUsers = 'Ingresa usuarios.'
-    if (cur.selectedServices.length === 0) next.selectedServices = 'Selecciona al menos un servicio.'
+    if (!cur.estimatedUsers || Number(cur.estimatedUsers) <= 0)
+      next.estimatedUsers = 'Ingresa usuarios.'
+    if (cur.selectedServices.length === 0)
+      next.selectedServices = 'Selecciona al menos un servicio.'
     if (!cur.migrationGoal.trim()) next.migrationGoal = 'Describe objetivo.'
     return next
   }
@@ -291,7 +320,10 @@ export default function Planning() {
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
     const nextErrors = validate(form)
-    if (Object.keys(nextErrors).length > 0) { setErrors(nextErrors); return }
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors)
+      return
+    }
     const proposal: CloudProposal = {
       id: `prop-${Date.now()}`,
       solutionName: form.solutionName.trim(),
@@ -339,341 +371,593 @@ export default function Planning() {
     setDetailId((prev) => (prev === id ? null : prev))
   }
 
-  function handleToggleCompareMode() { setCompareMode((p) => !p); setSelectedIds([]) }
-  function handleToggleCompare(id: string) { setSelectedIds((prev) => prev.includes(id) ? prev.filter((s) => s !== id) : prev.length >= 2 ? prev : [...prev, id]) }
+  function handleToggleCompareMode() {
+    setCompareMode((p) => !p)
+    setSelectedIds([])
+  }
+
+  function handleToggleCompare(id: string) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : prev.length >= 2 ? prev : [...prev, id]
+    )
+  }
+
+  function exportProposal(proposal: CloudProposal) {
+    const blob = new Blob([JSON.stringify(proposal, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `propuesta-${proposal.solutionName.replace(/[^a-z0-9]+/gi, '-')}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
 
   const comparisonRows: { label: string; value: (p: CloudProposal) => ReactNode }[] = [
-    { label: 'Estado', value: (p) => <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[p.status]}`}>{statusLabel(p.status)}</span> },
-    { label: 'Prioridad', value: (p) => <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${priorityStyles[p.priority]}`}><Flag className="h-3 w-3" />{priorityLabel(p.priority)}</span> },
+    {
+      label: 'Estado',
+      value: (p) => <StatusPill status={p.status} />
+    },
+    {
+      label: 'Prioridad',
+      value: (p) => <PriorityPill priority={p.priority} />
+    },
     { label: 'Tipo', value: (p) => p.appType },
     { label: 'Región', value: (p) => regionName(p.region) },
     { label: 'Usuarios', value: (p) => p.estimatedUsers.toLocaleString('es-PE') },
     { label: 'Implementación', value: (p) => estimationWeeks(p.availabilityLevel) },
     { label: 'Disponibilidad', value: (p) => availabilitySla(p.availabilityLevel) },
     { label: 'Creada', value: (p) => formatDate(p.createdAt) },
-    { label: 'Servicios', value: (p) => <div className="flex flex-wrap gap-1.5">{p.selectedServices.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">{serviceName(s)}</span>)}</div> },
+    {
+      label: 'Servicios',
+      value: (p) => (
+        <div className="flex flex-wrap gap-1.5">
+          {p.selectedServices.map((s) => (
+            <span key={s} className="badge badge-solid">
+              {serviceName(s)}
+            </span>
+          ))}
+        </div>
+      )
+    },
     { label: 'Descripción', value: (p) => p.description }
   ]
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-textPrimary dark:text-darkTextPrimary">Planificación Cloud</h1>
-        <p className="mt-2 text-textSecondary dark:text-darkTextSecondary">Define propuestas de arquitectura cloud y regístralas para su evaluación.</p>
-      </div>
+    <div className="page">
+      <PageHeader
+        eyebrow="Gobierno de portafolio"
+        title="Planificación Cloud"
+        description="Define propuestas de arquitectura cloud y regístralas para su evaluación."
+        badge={<Badge tone="neutral">{portfolio.projects} proyectos maestros</Badge>}
+        actions={
+          <Button
+            variant={compareMode ? 'accent' : 'secondary'}
+            icon={Columns}
+            aria-pressed={compareMode}
+            onClick={handleToggleCompareMode}
+          >
+            Comparar
+          </Button>
+        }
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <aside className="lg:col-span-4">
-          <div className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-            <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
-              <Rocket className="h-4 w-4 text-primary dark:text-darkPrimary" />
-              Plantillas rápidas
-            </p>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
+        <aside className="space-y-6 lg:col-span-4">
+          <Section title="Plantillas rápidas" icon={Rocket}>
             <div className="grid grid-cols-3 gap-2">
               {TEMPLATES.map((template) => (
                 <button
                   key={template.id}
                   type="button"
                   onClick={() => applyTemplate(template)}
-                   className="flex flex-col items-center gap-1 rounded-lg border border-border bg-background px-2 py-2 text-center text-[11px] font-medium text-textPrimary transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/40"
+                  className="flex flex-col items-center gap-1 rounded-control border border-border bg-background px-2 py-2 text-center text-2xs font-medium text-textPrimary transition-all hover:border-accentFrom/40 hover:text-accentFrom dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40"
                 >
-                   <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-950 bg-gradient-to-br from-accentFrom/90 to-accentTo/90 text-white shadow-sm dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90">
-                     {template.icon}
-                   </span>
+                  <span className="icon-tile h-8 w-8 bg-gradient-to-br from-accentFrom to-accentTo text-white">
+                    {template.icon}
+                  </span>
                   {template.name}
                 </button>
               ))}
             </div>
-          </div>
+          </Section>
 
-          <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Section title="Nueva propuesta" icon={Plus}>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Nombre" error={errors.solutionName}>
+                  <TextInput
+                    name="solutionName"
+                    value={form.solutionName}
+                    onChange={handleChange}
+                    invalid={Boolean(errors.solutionName)}
+                    placeholder="Ej. Plataforma de e-commerce"
+                  />
+                </Field>
+                <Field label="Tipo" error={errors.appType}>
+                  <TextInput
+                    name="appType"
+                    value={form.appType}
+                    onChange={handleChange}
+                    invalid={Boolean(errors.appType)}
+                    placeholder="Ej. Web / API / Móvil"
+                  />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Región" error={errors.region}>
+                  <SelectInput
+                    name="region"
+                    value={form.region}
+                    onChange={handleChange}
+                    invalid={Boolean(errors.region)}
+                  >
+                    <option value="">Selecciona una región</option>
+                    {regionReferences.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </Field>
+                <Field label="Usuarios" error={errors.estimatedUsers}>
+                  <TextInput
+                    name="estimatedUsers"
+                    type="number"
+                    min={1}
+                    value={form.estimatedUsers}
+                    onChange={handleChange}
+                    invalid={Boolean(errors.estimatedUsers)}
+                    placeholder="Ej. 5000"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Descripción" error={errors.description}>
+                <TextArea
+                  name="description"
+                  rows={2}
+                  value={form.description}
+                  onChange={handleChange}
+                  invalid={Boolean(errors.description)}
+                  placeholder="Describe la solución y su propósito."
+                />
+              </Field>
+
+              <Field label="Objetivo" error={errors.migrationGoal}>
+                <TextArea
+                  name="migrationGoal"
+                  rows={2}
+                  value={form.migrationGoal}
+                  onChange={handleChange}
+                  invalid={Boolean(errors.migrationGoal)}
+                  placeholder="Ej. Reducir costos y mejorar la disponibilidad global."
+                />
+              </Field>
+
               <div>
-                <label className={labelClass}>Nombre</label>
-                <input name="solutionName" value={form.solutionName} onChange={handleChange} className={fieldClass(Boolean(errors.solutionName))} placeholder="Ej. Plataforma de e-commerce" />
+                <span className="field-label">Servicios Cloud</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {awsServices.map((s) => {
+                    const selected = form.selectedServices.includes(s.id)
+                    return (
+                      <div
+                        key={s.id}
+                        className={`rounded-control border px-2 py-1.5 transition-colors ${
+                          selected
+                            ? 'border-accentFrom/40 bg-accentFrom/5 dark:border-darkAccentFrom/40 dark:bg-darkAccentFrom/10'
+                            : 'border-border bg-surface dark:border-darkBorder dark:bg-darkBackground'
+                        }`}
+                      >
+                        <label className="flex cursor-pointer items-start gap-2 text-xs text-textPrimary dark:text-darkTextPrimary">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => handleServiceToggle(s.id)}
+                            className="mt-0.5 h-4 w-4 accent-accentFrom dark:accent-darkAccentFrom"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium">{s.name}</span>
+                            {selected && (
+                              <span className="mt-0.5 block text-2xs leading-relaxed text-textSecondary dark:text-darkTextSecondary">
+                                {s.mainFunction}
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      </div>
+                    )
+                  })}
+                </div>
+                {errors.selectedServices && (
+                  <span className="field-error">{errors.selectedServices}</span>
+                )}
               </div>
-              <div>
-                <label className={labelClass}>Tipo</label>
-                <input name="appType" value={form.appType} onChange={handleChange} className={fieldClass(Boolean(errors.appType))} placeholder="Ej. Web / API / Móvil" />
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Field label="Estado inicial">
+                  <SelectInput name="status" value={form.status} onChange={handleChange}>
+                    {statusOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </Field>
+                <Field label="Prioridad">
+                  <SelectInput name="priority" value={form.priority} onChange={handleChange}>
+                    {priorityOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </Field>
+                <Field label="Disponibilidad">
+                  <SelectInput
+                    name="availabilityLevel"
+                    value={form.availabilityLevel}
+                    onChange={handleChange}
+                  >
+                    <option value="">Sin definir</option>
+                    {(Object.keys(AVAILABILITY_META) as AvailabilityLevel[]).map((level) => (
+                      <option key={level} value={level}>
+                        {AVAILABILITY_META[level].label} · {AVAILABILITY_META[level].sla}
+                      </option>
+                    ))}
+                  </SelectInput>
+                </Field>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>Región</label>
-                <select name="region" value={form.region} onChange={handleChange} className={fieldClass(Boolean(errors.region))}>
-                  <option value="">Selecciona una región</option>
-                  {regionReferences.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>Usuarios</label>
-                <input name="estimatedUsers" type="number" min={1} value={form.estimatedUsers} onChange={handleChange} className={fieldClass(Boolean(errors.estimatedUsers))} placeholder="Ej. 5000" />
-              </div>
-            </div>
+              {form.availabilityLevel && (
+                <div className="hint-bar">
+                  <Timer className="mt-0.5 h-4 w-4 shrink-0 text-accentFrom dark:text-darkAccentFrom" />
+                  <span>
+                    Tiempo estimado de implementación:{' '}
+                    <strong className="font-semibold">
+                      {estimationRange(form.availabilityLevel)}
+                    </strong>
+                  </span>
+                </div>
+              )}
 
-            <div>
-              <label className={labelClass}>Descripción</label>
-              <textarea name="description" rows={2} value={form.description} onChange={handleChange} className={fieldClass(Boolean(errors.description))} placeholder="Describe la solución y su propósito." />
-            </div>
+              <Button type="submit" variant="accent" icon={Plus} className="w-full">
+                Registrar propuesta
+              </Button>
+            </form>
+          </Section>
 
-            <div>
-              <label className={labelClass}>Objetivo</label>
-              <textarea name="migrationGoal" rows={2} value={form.migrationGoal} onChange={handleChange} className={fieldClass(Boolean(errors.migrationGoal))} placeholder="Ej. Reducir costos y mejorar la disponibilidad global." />
-            </div>
-
-            <div>
-              <label className={labelClass}>Servicios Cloud</label>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                {awsServices.map((s) => {
-                  const selected = form.selectedServices.includes(s.id)
-                  return (
-                    <div
-                      key={s.id}
-                      className={`rounded-md border px-2 py-1.5 transition-colors ${
-                        selected
-                          ? 'border-accentFrom/40 bg-accentFrom/5 dark:border-darkAccentFrom/40 dark:bg-darkAccentFrom/10'
-                          : 'border-border bg-white dark:border-darkBorder dark:bg-darkCard'
-                      }`}
-                    >
-                      <label className="flex cursor-pointer items-start gap-2 text-xs text-textPrimary dark:text-darkTextPrimary">
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          onChange={() => handleServiceToggle(s.id)}
-                          className="mt-0.5 h-4 w-4 accent-accentFrom dark:accent-darkAccentFrom"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">{s.name}</span>
-                          {selected && (
-                            <span className="mt-0.5 block text-[10px] leading-relaxed text-textSecondary dark:text-darkTextSecondary">
-                              {s.mainFunction}
-                            </span>
-                          )}
-                        </span>
-                      </label>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {form.availabilityLevel && (
-              <div className="flex items-center gap-2 rounded-md border border-accentFrom/20 bg-gradient-to-r from-accentFrom/5 to-accentTo/5 px-3 py-2 text-xs text-textPrimary dark:border-darkAccentFrom/30 dark:from-darkAccentFrom/10 dark:to-darkAccentTo/10 dark:text-darkTextPrimary">
-                <Timer className="h-4 w-4 shrink-0 text-accentFrom dark:text-darkAccentFrom" />
-                <span>
-                  Tiempo estimado de implementación:{' '}
-                  <strong className="font-semibold">{estimationRange(form.availabilityLevel)}</strong>
+          <button
+            type="button"
+            onClick={openSuggestions}
+            className="hint-bar w-full text-left"
+          >
+            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accentFrom dark:text-darkAccentFrom" />
+            <span className="flex flex-col gap-1">
+              <span className="flex items-center gap-2">
+                <span className="font-semibold text-textPrimary dark:text-darkTextPrimary">
+                  Ver sugerencias de arquitectura
                 </span>
+                <ChevronDown className="h-4 w-4" />
+              </span>
+              <span>
+                {suggestions.length > 0
+                  ? `${suggestions.length} opciones según tu configuración — desplázate para verlas`
+                  : 'Genera 3 opciones automáticas — desplázate para verlas'}
+              </span>
+            </span>
+          </button>
+        </aside>
+
+        <main className="space-y-6 lg:col-span-8">
+          <Section
+            title="Propuestas registradas"
+            description={`Portafolio maestro: ${portfolio.approved} aprobadas · ${portfolio.inReview} en revisión · ${portfolio.draft} borradores.`}
+            actions={
+              <ChipTabs
+                ariaLabel="Filtrar por estado"
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { value: 'todas', label: 'Todas', count: filterCounts.todas },
+                  {
+                    value: 'borrador',
+                    label: 'Borrador',
+                    count: filterCounts.borrador
+                  },
+                  {
+                    value: 'en_revision',
+                    label: 'En revisión',
+                    count: filterCounts.en_revision
+                  },
+                  { value: 'aprobada', label: 'Aprobada', count: filterCounts.aprobada }
+                ]}
+              />
+            }
+          >
+            {projects.length > 0 && (
+              <p className="hint-bar mb-4">
+                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accentFrom dark:text-darkAccentFrom" />
+                <span>
+                  Los {portfolio.projects} proyectos maestros se comparten con Costos,
+                  Infraestructura, Red y Seguridad: al cambiar su estado aquí, cambia en todas las
+                  vistas.
+                </span>
+              </p>
+            )}
+
+            {filteredProposals.length > 0 && (
+              <ol className="relative ml-1 border-l-2 border-border pl-6 dark:border-darkBorder">
+                {filteredProposals.map((p) => (
+                  <li key={`timeline-${p.id}`} className="relative pb-4 last:pb-0">
+                    <span
+                      className={`absolute -left-[30px] top-4 h-3 w-3 rounded-full border-2 border-background dark:border-darkBackground ${
+                        p.status === 'aprobada'
+                          ? 'bg-success dark:bg-darkSuccess'
+                          : p.status === 'en_revision'
+                            ? 'bg-warning dark:bg-darkWarning'
+                            : 'bg-danger dark:bg-darkDanger'
+                      }`}
+                    />
+                    <article className="card-tile">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <h4 className="text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
+                              {p.solutionName}
+                            </h4>
+                            <StatusPill status={p.status} />
+                            <PriorityPill priority={p.priority} />
+                            <span className="text-2xs text-textSecondary dark:text-darkTextSecondary">
+                              {formatDate(p.createdAt)}
+                            </span>
+                            {compareMode && (
+                              <label className="ml-auto inline-flex items-center gap-2 text-2xs text-textSecondary dark:text-darkTextSecondary">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.includes(p.id)}
+                                  disabled={
+                                    !selectedIds.includes(p.id) && selectedIds.length >= 2
+                                  }
+                                  onChange={() => handleToggleCompare(p.id)}
+                                  className="h-4 w-4 accent-accentFrom dark:accent-darkAccentFrom"
+                                />
+                                Comparar
+                              </label>
+                            )}
+                          </div>
+
+                          <p className="mt-1 text-xs text-textSecondary dark:text-darkTextSecondary">
+                            {p.appType} · {regionName(p.region)} ·{' '}
+                            {p.estimatedUsers.toLocaleString('es-PE')} usuarios
+                          </p>
+
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-textSecondary dark:text-darkTextSecondary">
+                            <span className="inline-flex items-center gap-1">
+                              <Timer className="h-3 w-3" />
+                              Implementación:{' '}
+                              <span className="font-semibold">
+                                {estimationWeeks(p.availabilityLevel)}
+                              </span>
+                            </span>
+                            <span>
+                              · Disponibilidad:{' '}
+                              <span className="font-semibold">
+                                {availabilitySla(p.availabilityLevel)}
+                              </span>
+                            </span>
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {p.selectedServices.map((s) => (
+                              <span key={s} className="badge badge-solid">
+                                {serviceName(s)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="ml-4 flex shrink-0 flex-col items-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDetailId(p.id)}
+                          >
+                            Ver detalles
+                          </Button>
+                          <div className="flex flex-wrap justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              icon={Copy}
+                              onClick={() => duplicateProposal(p)}
+                            >
+                              Duplicar
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => exportProposal(p)}>
+                              Exportar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              icon={Trash2}
+                              onClick={() => handleRemove(p.id)}
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  </li>
+                ))}
+              </ol>
+            )}
+
+            {filteredProposals.length === 0 && (
+              <div className="empty-state">
+                No hay propuestas con este estado. Cambia el filtro o registra una nueva.
               </div>
             )}
 
-            <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-md bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_0_14px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40">
-              <Plus className="h-4 w-4" /> Registrar propuesta
-            </button>
-          </form>
-
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={openSuggestions}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-accentFrom/30 bg-gradient-to-r from-accentFrom/5 to-accentTo/5 p-4 text-center text-sm text-textPrimary shadow-sm transition-all hover:border-accentFrom/50 hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkAccentFrom/40 dark:from-darkAccentFrom/10 dark:to-darkAccentTo/10 dark:hover:border-darkAccentFrom/50 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:text-darkTextPrimary"
-            >
-              <Lightbulb className="h-4 w-4 text-accentFrom dark:text-darkAccentFrom" />
-              <span className="flex flex-col items-center gap-1">
-                <span className="flex items-center gap-2"><span className="font-semibold">Ver sugerencias de arquitectura</span><ChevronDown className="h-4 w-4" /></span>
-                <span className="text-xs text-textSecondary dark:text-darkTextSecondary">
-                  {suggestions.length > 0 ? `${suggestions.length} opciones según tu configuración — desplázate para verlas` : 'Genera 3 opciones automáticas — desplázate para verlas'}
-                </span>
-              </span>
-            </button>
-          </div>
-        </aside>
-        <main className="lg:col-span-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Propuestas registradas ({proposals.length})</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex gap-2">
-                 {filterTabs.map((tab) => (
-                   <button
-                     key={tab.value}
-                     type="button"
-                     onClick={() => setStatusFilter(tab.value)}
-                     className={`rounded-full border px-3 py-1 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
-                       statusFilter === tab.value
-                         ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
-                         : 'border-border bg-white text-textPrimary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/40'
-                     }`}
-                   >
-                     {tab.label} ({filterCounts[tab.value]})
-                   </button>
-                 ))}
-              </div>
-               <button
-                 type="button"
-                 onClick={handleToggleCompareMode}
-                 aria-pressed={compareMode}
-                 className={`ml-2 inline-flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-semibold shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
-                   compareMode
-                     ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
-                     : 'border-border bg-white text-textPrimary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/40'
-                 }`}
-               >
-                 <Columns className="h-4 w-4" /> Comparar
-               </button>
-            </div>
-          </div>
-
-          {filteredProposals.length > 0 && (
-            <ol className="relative mt-6 ml-1 border-l-2 border-border pl-6 dark:border-darkBorder">
-              {filteredProposals.map((p) => (
-                <li key={`timeline-${p.id}`} className="relative pb-4 last:pb-0">
-                  <span
-                    className={`absolute -left-[30px] top-4 h-3 w-3 rounded-full border-2 border-background dark:border-darkBackground ${
-                      p.status === 'aprobada'
-                        ? 'bg-success'
-                        : p.status === 'en_revision'
-                          ? 'bg-warning'
-                          : 'bg-textSecondary'
-                    }`}
-                  />
-                  <article className="rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                          <h4 className="text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
-                            {p.solutionName}
-                          </h4>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusStyles[p.status]}`}>
-                            {statusLabel(p.status)}
-                          </span>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${priorityStyles[p.priority]}`}>
-                            <Flag className="h-3 w-3" /> {priorityLabel(p.priority)}
-                          </span>
-                          <span className="text-[11px] text-textSecondary dark:text-darkTextSecondary">
-                            {formatDate(p.createdAt)}
-                          </span>
-                          {compareMode && (
-                            <label className="ml-auto inline-flex items-center gap-2 text-[11px] text-textSecondary dark:text-darkTextSecondary">
-                              <input type="checkbox" checked={selectedIds.includes(p.id)} disabled={!selectedIds.includes(p.id) && selectedIds.length >= 2} onChange={() => handleToggleCompare(p.id)} className="h-4 w-4 accent-accentFrom dark:accent-darkAccentFrom" />
-                              Compare
-                            </label>
-                          )}
-                        </div>
-
-                        <p className="mt-1 text-xs text-textSecondary dark:text-darkTextSecondary">
-                          {p.appType} · {regionName(p.region)} · {p.estimatedUsers.toLocaleString('es-PE')} usuarios
-                        </p>
-
-                        <div className="mt-1 flex items-center gap-2 text-xs text-textSecondary dark:text-darkTextSecondary">
-                          <span className="inline-flex items-center gap-1">
-                            <Timer className="h-3 w-3" /> Implementación: <span className="font-semibold">{estimationWeeks(p.availabilityLevel)}</span>
-                          </span>
-                          <span>· Disponibilidad: <span className="font-semibold">{availabilitySla(p.availabilityLevel)}</span></span>
-                        </div>
-
-                        <div className="mt-2 flex flex-wrap gap-1.5">{p.selectedServices.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">{serviceName(s)}</span>)}</div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-2 ml-4">
-                        <button type="button" onClick={() => setDetailId(p.id)} className="rounded text-xs text-textPrimary underline transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Ver detalles</button>
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => duplicateProposal(p)} className="inline-flex items-center gap-1 rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30"><Copy className="h-3 w-3" /> Duplicar</button>
-                          <button type="button" onClick={() => { const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `propuesta-${p.solutionName.replace(/[^a-z0-9]+/gi, '-')}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); }} className="rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Exportar</button>
-                          <button onClick={() => handleRemove(p.id)} className="text-xs text-danger dark:text-darkDanger">Eliminar</button>
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                </li>
-              ))}
-            </ol>
-          )}
-
-          {compareMode && selectedProposals.length === 2 && (
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-white p-3 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-              <table className="min-w-full text-left text-xs text-textPrimary dark:text-darkTextPrimary">
-                <thead>
-                  <tr>
-                    <th className="px-2 py-2 font-semibold">Campo</th>
-                    {selectedProposals.map((proposal) => (
-                      <th key={proposal.id} className="px-2 py-2 font-semibold">{proposal.solutionName}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row) => (
-                    <tr key={row.label} className="border-t border-border dark:border-darkBorder">
-                      <td className="px-2 py-2 font-medium text-textSecondary dark:text-darkTextSecondary">{row.label}</td>
+            {compareMode && selectedProposals.length === 2 && (
+              <div className="table-wrap mt-4">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Campo</th>
                       {selectedProposals.map((proposal) => (
-                        <td key={`${proposal.id}-${row.label}`} className="px-2 py-2 align-top">{row.value(proposal)}</td>
+                        <th key={proposal.id} scope="col">
+                          {proposal.solutionName}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {comparisonRows.map((row) => (
+                      <tr key={row.label}>
+                        <td className="font-medium text-textSecondary dark:text-darkTextSecondary">
+                          {row.label}
+                        </td>
+                        {selectedProposals.map((proposal) => (
+                          <td key={`${proposal.id}-${row.label}`} className="align-top">
+                            {row.value(proposal)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-          {detailProposal && (
-            <section className="mt-4 rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold">{detailProposal.solutionName}</h3>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="text-xs">{detailProposal.appType}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs ${statusStyles[detailProposal.status]}`}>{statusLabel(detailProposal.status)}</span>
-                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${priorityStyles[detailProposal.priority]}`}>
-                      <Flag className="h-3 w-3" /> {priorityLabel(detailProposal.priority)}
-                    </span>
-                    <span className="text-[11px] text-textSecondary dark:text-darkTextSecondary">
-                      Creada: {formatDate(detailProposal.createdAt)}
-                    </span>
+            {detailProposal && (
+              <section className="section-card-compact mt-4">
+                <div className="section-head">
+                  <div className="min-w-0">
+                    <h3 className="section-title">{detailProposal.solutionName}</h3>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="text-xs">{detailProposal.appType}</span>
+                      <StatusPill status={detailProposal.status} />
+                      <PriorityPill priority={detailProposal.priority} />
+                      <span className="text-2xs text-textSecondary dark:text-darkTextSecondary">
+                        Creada: {formatDate(detailProposal.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => setDetailId(null)}>
+                    Cerrar
+                  </Button>
+                </div>
+
+                <div className="section-body grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+                  <div>
+                    Región:{' '}
+                    <strong className="font-semibold">
+                      {regionName(detailProposal.region)}
+                    </strong>
+                  </div>
+                  <div>
+                    Usuarios:{' '}
+                    <strong className="font-semibold">
+                      {detailProposal.estimatedUsers.toLocaleString('es-ES')}
+                    </strong>
+                  </div>
+                  <div>
+                    Disponibilidad:{' '}
+                    <strong className="font-semibold">
+                      {availabilitySla(detailProposal.availabilityLevel)}
+                    </strong>
                   </div>
                 </div>
-                <div>
-                  <button type="button" onClick={() => setDetailId(null)} className="rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Cerrar</button>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {detailProposal.selectedServices.map((s) => (
+                    <span key={s} className="badge badge-solid">
+                      {serviceName(s)}
+                    </span>
+                  ))}
                 </div>
-              </div>
 
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <div>Región: <strong className="font-semibold">{regionName(detailProposal.region)}</strong></div>
-                <div>Usuarios: <strong className="font-semibold">{detailProposal.estimatedUsers.toLocaleString('es-ES')}</strong></div>
-                <div>Disponibilidad: <strong className="font-semibold">{availabilitySla(detailProposal.availabilityLevel)}</strong></div>
-              </div>
-
-              <div className="mt-3 flex flex-wrap gap-2">{detailProposal.selectedServices.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">{serviceName(s)}</span>)}</div>
-
-              {detailSuggestion && <div className="mt-3 rounded-md border border-border bg-background p-3 text-sm text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary">Arquitectura recomendada: <strong>{detailSuggestion.stack.join(' + ')}</strong> — {currency.format(detailSuggestion.estimatedCost)} / mes</div>}
-            </section>
-          )}
+                {detailSuggestion && (
+                  <div className="hint-bar mt-3">
+                    <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accentFrom" />
+                    <span>
+                      Arquitectura recomendada:{' '}
+                      <strong>{detailSuggestion.stack.join(' + ')}</strong> —{' '}
+                      {currency.format(detailSuggestion.estimatedCost)} / mes
+                    </span>
+                  </div>
+                )}
+              </section>
+            )}
+          </Section>
         </main>
       </div>
 
       {suggestionsOpen && (
-        <section ref={suggestionsRef} className="mt-6 scroll-mt-24 rounded-2xl border border-accentFrom/30 bg-gradient-to-r from-accentFrom/5 to-accentTo/5 p-4 dark:border-darkAccentFrom/40 dark:from-darkAccentFrom/10 dark:to-darkAccentTo/10">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold flex items-center gap-2"><Lightbulb className="h-4 w-4 text-accentFrom dark:text-darkAccentFrom" /> Arquitecturas sugeridas <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">Simulación</span></h3>
-              <p className="mt-1 text-xs text-textSecondary dark:text-darkTextSecondary">Configuración actual: {form.appType || 'sin tipo'} · {form.estimatedUsers || 0} usuarios · disponibilidad {availabilitySla(form.availabilityLevel)}. Aplica una a tu formulario o regístrala.</p>
+        <section ref={suggestionsRef} className="hint-bar scroll-mt-24 flex-col">
+          <div className="section-head w-full">
+            <div className="min-w-0">
+              <h3 className="section-title">
+                <Lightbulb className="h-4 w-4 text-accentFrom dark:text-darkAccentFrom" />
+                Arquitecturas sugeridas
+                <Badge tone="warning">Simulación</Badge>
+              </h3>
+              <p className="section-subtitle">
+                Configuración actual: {form.appType || 'sin tipo'} · {form.estimatedUsers || 0}{' '}
+                usuarios · disponibilidad {availabilitySla(form.availabilityLevel)}. Aplica una a tu
+                formulario o regístrala.
+              </p>
             </div>
-            <button type="button" onClick={() => setSuggestionsOpen(false)} className="rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Cerrar</button>
+            <Button size="sm" variant="ghost" onClick={() => setSuggestionsOpen(false)}>
+              Cerrar
+            </Button>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-4 grid w-full grid-cols-1 gap-4 md:grid-cols-3">
             {(suggestions.length > 0 ? suggestions : suggestionsFallback).map((sugg) => (
-              <div key={sugg.name} className="flex flex-col rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-                <h4 className="font-semibold text-sm">{sugg.name}</h4>
-                <p className="text-[11px] text-textSecondary dark:text-darkTextSecondary">{sugg.tagline}</p>
+              <div key={sugg.name} className="card-tile flex flex-col">
+                <h4 className="text-sm font-semibold">{sugg.name}</h4>
+                <p className="text-2xs text-textSecondary dark:text-darkTextSecondary">
+                  {sugg.tagline}
+                </p>
                 <p className="mt-2 font-semibold">{sugg.stack.join(' + ')}</p>
-                <div className="mt-2 flex flex-wrap gap-1.5">{sugg.stack.map((s) => <span key={s} className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">{s}</span>)}</div>
-                <p className="mt-2 text-xs text-textSecondary dark:text-darkTextSecondary">{sugg.rationale}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {sugg.stack.map((s) => (
+                    <span key={s} className="badge badge-solid">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-textSecondary dark:text-darkTextSecondary">
+                  {sugg.rationale}
+                </p>
                 <p className="mt-2 font-bold">{currency.format(sugg.estimatedCost)} / mes</p>
-                <div className="mt-auto pt-3 flex flex-wrap gap-2">
-                  <button onClick={() => applySuggestion(sugg)} className="inline-flex items-center gap-1 rounded-md bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-3 py-1 text-xs font-semibold text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40"><Check className="h-3 w-3" /> Usar en el formulario</button>
-                  <button type="button" onClick={() => setForm((prev) => ({ ...prev, solutionName: prev.solutionName || `${sugg.name} · ${form.appType || 'Arquitectura'}` }))} className="rounded text-xs text-textPrimary transition-colors hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextPrimary dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30">Preparar nombre</button>
+                <div className="mt-auto flex flex-wrap gap-2 pt-3">
+                  <Button
+                    size="sm"
+                    variant="accent"
+                    icon={Check}
+                    onClick={() => applySuggestion(sugg)}
+                  >
+                    Usar en el formulario
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        solutionName:
+                          prev.solutionName || `${sugg.name} · ${form.appType || 'Arquitectura'}`
+                      }))
+                    }
+                  >
+                    Preparar nombre
+                  </Button>
                 </div>
               </div>
             ))}

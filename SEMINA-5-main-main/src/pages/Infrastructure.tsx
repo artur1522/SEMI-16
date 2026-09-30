@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Info, PiggyBank, Plus, Server, ShieldCheck, Workflow, Trash2 } from 'lucide-react'
+import { Info, PiggyBank, Plus, Server, Workflow, Trash2 } from 'lucide-react'
 import RegionCard from '../components/RegionCard'
 import RegionMap from '../components/RegionMap'
 import { useCloudStore } from '../store/cloudStore'
 import { regionReferences } from '../data/regions'
 import { awsServices } from '../data/awsServices'
 import { getServerMeaning } from '../data/serverNames'
+import { plannedResourceCount } from '../data/cloudOpsData'
+import { Badge, Button, Field, PageHeader, ProgressBar, Section, SelectInput } from '../components/ui'
 import type { CostEnvironment } from '../types/cloud'
 
 const environments: { value: CostEnvironment; label: string }[] = [
@@ -55,8 +57,6 @@ const regionPricing: Record<string, { factor: number; currency: string }> = {
   'ap-southeast-1': { factor: 1.36, currency: 'SGD' }
 }
 
-const pricingUnits = ['$0.023', '$0.045']
-
 function formatPrice(amount: number, factor: number, isStorage: boolean) {
   const value = amount * factor
   return isStorage ? `$${value.toFixed(3)}/GB` : `$${value.toFixed(2)}`
@@ -70,7 +70,7 @@ function getReplicationState(regionId: string): ReplicationState {
 }
 
 export default function Infrastructure() {
-  const { servers, regions, addServer, removeServer } = useCloudStore()
+  const { servers, regions, addServer, removeServer, projects } = useCloudStore()
   const operationalCount = regions.filter((region) => region.status === 'operational').length
 
   const [serviceId, setServiceId] = useState('ec2')
@@ -98,21 +98,43 @@ export default function Infrastructure() {
   }
 
   const servicePricingRows = awsServices.map((service) => {
-    const baseCompute = service.id === 's3' ? 0.023 : service.id === 'rds' ? 0.235 : service.id === 'nat' ? 0.062 : 0.045
-    const productName = service.name === 'EC2' ? 'm5.large' : service.name === 'RDS' ? 'db.t3.micro' : service.name === 'VPC' ? 'NAT Gateway' : service.name === 'Route 53' ? 'Zonas DNS' : service.name
+    const baseCompute =
+      service.id === 's3'
+        ? 0.023
+        : service.id === 'rds'
+          ? 0.235
+          : service.id === 'nat'
+            ? 0.062
+            : 0.045
+    const productName =
+      service.name === 'EC2'
+        ? 'm5.large'
+        : service.name === 'RDS'
+          ? 'db.t3.micro'
+          : service.name === 'VPC'
+            ? 'NAT Gateway'
+            : service.name === 'Route 53'
+              ? 'Zonas DNS'
+              : service.name
     return { service: productName, unit: baseCompute }
   })
 
-  return (
-    <div>
-      <h1 className="text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-        Infraestructura Global
-      </h1>
-      <p className="mt-2 text-textSecondary dark:text-darkTextSecondary">
-        {operationalCount} de {regions.length} regiones operativas · {servers.length} servidores en total
-      </p>
+  const planned = plannedResourceCount(projects)
+  const provisionProgress = planned > 0 ? Math.min(100, (servers.length / planned) * 100) : 0
 
-      <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-textSecondary dark:text-darkTextSecondary">
+  return (
+    <div className="page">
+      <PageHeader
+        eyebrow="Operación cloud"
+        title="Infraestructura Global"
+        description="Regiones, zonas de disponibilidad e inventario de recursos en tiempo real."
+        badge={<Badge tone={operationalCount === regions.length ? 'success' : 'warning'} dot>
+          {operationalCount} de {regions.length} regiones operativas
+        </Badge>}
+        actions={<Badge tone="info">{servers.length} servidores</Badge>}
+      />
+
+      <div className="flex flex-wrap items-center gap-4 text-xs text-textSecondary dark:text-darkTextSecondary">
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full bg-success dark:bg-darkSuccess" />
           Latencia baja (&lt; 50 ms)
@@ -127,188 +149,177 @@ export default function Infrastructure() {
         </span>
       </div>
 
-      <div className="mt-6">
-        <RegionMap regions={regions} servers={servers} />
-      </div>
+      <RegionMap regions={regions} servers={servers} />
 
-      <section className="glass-card mt-6 rounded-3xl p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-              <Server className="h-5 w-5 text-primary dark:text-darkPrimary" />
-              Inventario en tiempo real
-            </h2>
-            <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-              Agrega o retira servidores: el mapa, el dashboard y los costos se recalculan al instante.
-            </p>
+      <Section
+        title="Plan frente al inventario"
+        description="Recursos planificados en el portafolio de proyectos vs. servidores realmente provisionados."
+        icon={Server}
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="panel-muted">
+            <p className="eyebrow">Recursos planificados</p>
+            <p className="metric-value text-xl">{planned}</p>
           </div>
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
-            {servers.length} servidores
-          </span>
+          <div className="panel-muted">
+            <p className="eyebrow">Recursos provisionados</p>
+            <p className="metric-value text-xl">{servers.length}</p>
+          </div>
+          <div className="panel-muted">
+            <p className="eyebrow">Avance de aprovisionamiento</p>
+            <p className="metric-value text-xl">{Math.round(provisionProgress)}%</p>
+          </div>
         </div>
+        <ProgressBar percent={provisionProgress} tone="info" className="mt-4" />
+      </Section>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-            Servicio
-            <select
-              value={serviceId}
-              onChange={(event) => setServiceId(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
-            >
+      <Section
+        title="Inventario en tiempo real"
+        icon={Server}
+        actions={<Badge tone="accent">{servers.length} servidores</Badge>}
+        description="Agrega o retira servidores: el mapa, el dashboard y los costos se recalculan al instante."
+      >
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+          <Field label="Servicio">
+            <SelectInput value={serviceId} onChange={(event) => setServiceId(event.target.value)}>
               {awsServices.map((service) => (
                 <option key={service.id} value={service.id}>
                   {service.name}
                 </option>
               ))}
-            </select>
-          </label>
-          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-            Región
-            <select
-              value={regionId}
-              onChange={(event) => setRegionId(event.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
-            >
+            </SelectInput>
+          </Field>
+          <Field label="Región">
+            <SelectInput value={regionId} onChange={(event) => setRegionId(event.target.value)}>
               {regionReferences.map((region) => (
                 <option key={region.id} value={region.id}>
                   {region.name}
                 </option>
               ))}
-            </select>
-          </label>
-          <label className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-            Entorno
-            <select
+            </SelectInput>
+          </Field>
+          <Field label="Entorno">
+            <SelectInput
               value={environment}
               onChange={(event) => setEnvironment(event.target.value as CostEnvironment)}
-              className="mt-1 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-textPrimary focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:focus:ring-darkAccentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary"
             >
               {environments.map((env) => (
                 <option key={env.value} value={env.value}>
                   {env.label}
                 </option>
               ))}
-            </select>
-          </label>
+            </SelectInput>
+          </Field>
           <div className="flex items-end">
-            <button
-              type="button"
-              onClick={handleAdd}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40 md:w-auto"
-            >
-              <Plus className="h-4 w-4" />
+            <Button type="button" variant="accent" icon={Plus} onClick={handleAdd} className="w-full">
               Agregar servidor
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-accentFrom/20 bg-gradient-to-r from-accentFrom/5 to-accentTo/5 p-3 text-xs leading-relaxed text-textSecondary dark:border-darkAccentFrom/30 dark:from-darkAccentFrom/10 dark:to-darkAccentTo/10 dark:text-darkTextSecondary">
+        <div className="hint-bar mt-4">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-accentFrom dark:text-darkAccentFrom" />
           <p>
-            Los nombres usan el formato <span className="font-semibold text-textPrimary dark:text-darkTextPrimary">servicio-región-número</span>. Debajo de cada nombre se muestra su significado completo.
+            Los nombres usan el formato{' '}
+            <span className="font-semibold text-textPrimary dark:text-darkTextPrimary">
+              servicio-región-número
+            </span>
+            . Debajo de cada nombre se muestra su significado completo.
           </p>
         </div>
 
-        <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+        <div className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
           {servers.map((server) => {
             const isRecentlyAdded = server.id === lastAddedServerId
 
             return (
-            <div
-              key={server.id}
-              ref={(node) => {
-                serverRowRefs.current[server.id] = node
-              }}
-              className={`flex items-center justify-between gap-3 rounded-2xl border p-3 transition-all duration-300 ${
-                isRecentlyAdded
-                  ? 'border-violet-300/60 bg-violet-500/[0.06] shadow-[0_0_0_1px_rgba(168,85,247,0.28),0_0_24px_rgba(168,85,247,0.16)] dark:border-violet-400/40 dark:bg-violet-500/10 dark:shadow-[0_0_0_1px_rgba(192,132,252,0.35),0_0_24px_rgba(168,85,247,0.18)]'
-                  : 'border-white/40 bg-white/60 dark:border-white/5 dark:bg-slate-900/30'
-              }`}
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p
-                    className="truncate text-sm font-semibold text-textPrimary dark:text-darkTextPrimary"
-                    title={getServerMeaning(server)}
-                  >
-                    {server.name}
-                  </p>
-                  {isRecentlyAdded && (
-                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
-                      Nuevo
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs leading-relaxed text-textSecondary dark:text-darkTextSecondary">
-                  {getServerMeaning(server)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => removeServer(server.id)}
-                aria-label={`Eliminar ${server.name}: ${getServerMeaning(server)}`}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-textSecondary transition-colors hover:bg-danger/10 hover:text-danger dark:text-darkTextSecondary dark:hover:bg-darkDanger/10 dark:hover:text-darkDanger"
+              <div
+                key={server.id}
+                ref={(node) => {
+                  serverRowRefs.current[server.id] = node
+                }}
+                className={`flex items-center justify-between gap-3 rounded-control border p-3 transition-all duration-300 ${
+                  isRecentlyAdded
+                    ? 'border-accentFrom/50 bg-accentFrom/5 shadow-[0_0_0_1px_rgba(124,58,237,0.28),0_0_24px_rgba(124,58,237,0.16)] dark:border-darkAccentFrom/50 dark:bg-darkAccentFrom/10 dark:shadow-[0_0_0_1px_rgba(139,92,246,0.35),0_0_24px_rgba(139,92,246,0.18)]'
+                    : 'border-border bg-surface dark:border-darkBorder dark:bg-darkBackground'
+                }`}
               >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <p
+                      className="truncate text-sm font-semibold text-textPrimary dark:text-darkTextPrimary"
+                      title={getServerMeaning(server)}
+                    >
+                      {server.name}
+                    </p>
+                    {isRecentlyAdded && <Badge tone="accent">Nuevo</Badge>}
+                  </div>
+                  <p className="text-xs leading-relaxed text-textSecondary dark:text-darkTextSecondary">
+                    {getServerMeaning(server)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeServer(server.id)}
+                  aria-label={`Eliminar ${server.name}: ${getServerMeaning(server)}`}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-textSecondary transition-colors hover:bg-danger/10 hover:text-danger dark:text-darkTextSecondary dark:hover:bg-darkDanger/10 dark:hover:text-darkDanger"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             )
           })}
           {servers.length === 0 && (
-            <p className="rounded-xl bg-background p-4 text-center text-sm text-textSecondary dark:bg-darkBackground dark:text-darkTextSecondary">
-              Sin servidores. Agrega el primero arriba.
-            </p>
+            <p className="empty-state">Sin servidores. Agrega el primero arriba.</p>
           )}
         </div>
-      </section>
+      </Section>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-        {regions.map((region) => (
-          <RegionCard
-            key={region.id}
-            region={region}
-            failover={FAILOVER_MAP[region.id]}
-            compliance={COMPLIANCE_MAP[region.id]}
-            replication={getReplicationState(region.id)}
-          />
-        ))}
-      </div>
+      <Section title="Regiones y zonas de disponibilidad">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {regions.map((region) => (
+            <RegionCard
+              key={region.id}
+              region={region}
+              failover={FAILOVER_MAP[region.id]}
+              compliance={COMPLIANCE_MAP[region.id]}
+              replication={getReplicationState(region.id)}
+            />
+          ))}
+        </div>
+      </Section>
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <PiggyBank className="h-5 w-5 text-primary dark:text-darkPrimary" />
-            Comparativa de precios por región
-            <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-              Simulado
-            </span>
-          </h2>
+      <Section
+        title="Comparativa de precios por región"
+        icon={PiggyBank}
+        badge={<Badge tone="warning">Simulado</Badge>}
+        actions={
           <p className="text-xs text-textSecondary dark:text-darkTextSecondary">
             Mismo servicio, costo unitario distinto según región (factores relativos a us-east-1).
           </p>
-        </div>
-
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[540px] text-left text-sm">
+        }
+      >
+        <div className="table-wrap">
+          <table className="data-table min-w-[720px]">
             <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wide text-textSecondary dark:border-darkBorder dark:text-darkTextSecondary">
-                <th className="px-2 py-2">Servicio</th>
+              <tr>
+                <th scope="col">Servicio</th>
                 {regionReferences.map((region) => (
-                  <th key={region.id} className="px-2 py-2">
+                  <th key={region.id} scope="col">
                     {region.name}
-                    <span className="block font-normal normal-case">{regionPricing[region.id]?.factor}x</span>
+                    <span className="block font-normal normal-case">
+                      {regionPricing[region.id]?.factor}x
+                    </span>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {servicePricingRows.map((row) => (
-                <tr key={row.service} className="border-b border-border dark:border-darkBorder">
-                  <td className="px-2 py-2 font-medium text-textPrimary dark:text-darkTextPrimary">
-                    {row.service}
-                  </td>
+                <tr key={row.service}>
+                  <td className="font-medium">{row.service}</td>
                   {regionReferences.map((region) => (
-                    <td key={region.id} className="px-2 py-2 text-primary dark:text-darkPrimary">
+                    <td key={region.id} className="tabular-nums text-accentFrom dark:text-darkAccentFrom">
                       {formatPrice(row.unit, regionPricing[region.id]?.factor ?? 1, row.unit < 0.1)}
                     </td>
                   ))}
@@ -317,36 +328,35 @@ export default function Infrastructure() {
             </tbody>
           </table>
         </div>
-      </section>
+      </Section>
 
-      <section className="mt-6 rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            <Workflow className="h-5 w-5 text-primary dark:text-darkPrimary" />
-            Replicación y sincronización entre regiones
-            <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-              Simulado
-            </span>
-          </h2>
-        </div>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Estado de sincronización de datos y servicios entre cada región primaria y su respaldo sugerido.
-        </p>
+      <Section
+        title="Replicación y sincronización entre regiones"
+        icon={Workflow}
+        badge={<Badge tone="warning">Simulado</Badge>}
+        description="Estado de sincronización de datos y servicios entre cada región primaria y su respaldo sugerido."
+      >
         {regions.length === 0 ? (
-          <p className="mt-4 rounded-xl bg-background p-4 text-sm text-textSecondary dark:bg-darkBackground dark:text-darkTextSecondary">
+          <p className="panel-muted text-sm text-textSecondary dark:text-darkTextSecondary">
             Sin regiones desplegadas.
           </p>
         ) : (
-          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {regions.map((region) => {
               const backup = FAILOVER_MAP[region.id]
               if (!backup) return null
               const state = getReplicationState(region.id)
               return (
-                <div key={region.id} className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background p-4 dark:border-darkBorder dark:bg-darkBackground">
+                <div
+                  key={region.id}
+                  className="flex items-center justify-between gap-3 rounded-control border border-border bg-background p-4 dark:border-darkBorder dark:bg-darkBackground"
+                >
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
-                      {region.name} <span className="text-xs font-normal text-textSecondary dark:text-darkTextSecondary">→ {backup.name}</span>
+                      {region.name}{' '}
+                      <span className="text-xs font-normal text-textSecondary dark:text-darkTextSecondary">
+                        → {backup.name}
+                      </span>
                     </p>
                     <p className="mt-0.5 truncate text-xs text-textSecondary dark:text-darkTextSecondary">
                       {region.deployedServices.length === 0
@@ -354,22 +364,15 @@ export default function Infrastructure() {
                         : `Replica ${region.deployedServices.join(', ')} · RTT ${backup.latencyMs} ms`}
                     </p>
                   </div>
-                  <span
-                    className={`flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                      state === 'synced'
-                        ? 'bg-success/10 text-success dark:bg-darkSuccess/10 dark:text-darkSuccess'
-                        : 'bg-warning/10 text-warning dark:bg-darkWarning/10 dark:text-darkWarning'
-                    }`}
-                  >
-                    <span className={`h-2 w-2 rounded-full ${state === 'synced' ? 'bg-success dark:bg-darkSuccess' : 'bg-warning dark:bg-darkWarning'}`} />
+                  <Badge tone={state === 'synced' ? 'success' : 'warning'} dot className="shrink-0">
                     {state === 'synced' ? 'Sincronizado' : 'Con desfase'}
-                  </span>
+                  </Badge>
                 </div>
               )
             })}
           </div>
         )}
-      </section>
+      </Section>
     </div>
   )
 }

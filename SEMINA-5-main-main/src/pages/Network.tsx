@@ -16,7 +16,7 @@ import {
   XCircle,
   type LucideIcon
 } from 'lucide-react'
-import NetworkFlowDiagram from '../components/NetworkFlowDiagram'
+import { Badge, Button, PageHeader, Section } from '../components/ui'
 import { useCloudStore } from '../store/cloudStore'
 
 interface FlowNodeProps {
@@ -236,84 +236,48 @@ export default function Network() {
   const [showTrafficLogs, setShowTrafficLogs] = useState(false)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-          Arquitectura de Red
-        </h1>
-        <p className="mt-2 text-textSecondary dark:text-darkTextSecondary">
-          Flujo del tráfico desde Internet hasta los recursos dentro de la VPC.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-          <NetworkIcon className="h-5 w-5 text-primary dark:text-darkPrimary" />
-          Flujo de tráfico
-        </h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-xl border border-border bg-white p-1 dark:border-darkBorder dark:bg-darkCard" role="tablist" aria-label="Vista del diagrama">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={!detailedView}
-              onClick={() => setDetailedView(false)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 ${
-                !detailedView
-                  ? 'bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)]'
-                  : 'text-textSecondary hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:text-darkTextSecondary dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary'
-              }`}
-            >
-              Vista simple
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={detailedView}
-              onClick={() => setDetailedView(true)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/30 ${
-                detailedView
-                  ? 'bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)]'
-                  : 'text-textSecondary hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:text-darkTextSecondary dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary'
-              }`}
-            >
-              Vista detallada
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowLabels((previous) => !previous)}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-textPrimary shadow-sm transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:focus:ring-darkAccentFrom/30"
-          >
-            {showLabels ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-            {showLabels ? 'Ocultar etiquetas' : 'Mostrar etiquetas'}
-          </button>
-          {cloudFrontDown ? (
-            <button
-              type="button"
-              onClick={() => setCloudFrontDown(false)}
-              className="inline-flex items-center gap-2 rounded-xl bg-success px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-success/90 focus:outline-none focus:ring-2 focus:ring-success/40"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Restaurar CloudFront
-            </button>
-          ) : (
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-                Simulación
-              </span>
+    <div className="page">
+      <PageHeader
+        eyebrow="Topología VPC"
+        title="Arquitectura de Red"
+        description="Flujo del tráfico desde Internet hasta los recursos dentro de la VPC."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="segmented" role="tablist" aria-label="Vista del diagrama">
               <button
                 type="button"
-                onClick={() => setCloudFrontDown(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-danger px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-danger/90 focus:outline-none focus:ring-2 focus:ring-danger/40"
+                role="tab"
+                aria-selected={!detailedView}
+                onClick={() => setDetailedView(false)}
+                className={`segmented-item ${!detailedView ? 'segmented-item-active' : ''}`}
               >
-                <AlertTriangle className="h-4 w-4" />
-                Simular caída de CloudFront
+                Vista simple
               </button>
-            </span>
-          )}
-        </div>
-      </div>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={detailedView}
+                onClick={() => setDetailedView(true)}
+                className={`segmented-item ${detailedView ? 'segmented-item-active' : ''}`}
+              >
+                Vista detallada
+              </button>
+            </div>
+            <Button variant="secondary" size="sm" icon={showLabels ? Eye : EyeOff} onClick={() => setShowLabels((previous) => !previous)}>
+              {showLabels ? 'Ocultar etiquetas' : 'Mostrar etiquetas'}
+            </Button>
+            {cloudFrontDown ? (
+              <Button variant="primary" size="sm" icon={RotateCcw} onClick={() => setCloudFrontDown(false)}>
+                Restaurar CloudFront
+              </Button>
+            ) : (
+              <Button variant="danger" size="sm" icon={AlertTriangle} onClick={() => setCloudFrontDown(true)}>
+                Simular caída de CloudFront
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {detailedView && (
         <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm text-primary dark:border-darkPrimary/40 dark:bg-darkPrimary/10 dark:text-darkPrimary">
@@ -330,7 +294,7 @@ export default function Network() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-darkBorder dark:bg-darkCard sm:p-6">
+      <Section title="Flujo de tráfico" icon={NetworkIcon}>
         <div className="flex flex-col items-stretch gap-3 lg:flex-row lg:items-center lg:gap-2">
           <FlowNode
             icon={Globe}
@@ -447,7 +411,7 @@ export default function Network() {
             </div>
           </div>
         </div>
-      </div>
+      </Section>
 
       <div className="flex flex-wrap gap-4 text-xs text-textSecondary dark:text-darkTextSecondary">
         <span className="flex items-center gap-1.5">
@@ -460,28 +424,18 @@ export default function Network() {
         </span>
       </div>
 
-      <section>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-              <NetworkIcon className="h-5 w-5 text-primary dark:text-darkPrimary" />
-              Ancho de banda por tramo
-            </h2>
-            <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-              Consumo simulado de ancho de banda en cada segmento del flujo.
-            </p>
-          </div>
-          <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-            Simulación
-          </span>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <Section
+        title="Ancho de banda por tramo"
+        icon={NetworkIcon}
+        description="Consumo simulado de ancho de banda en cada segmento del flujo."
+        badge={<Badge tone="warning">Simulación</Badge>}
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {flowSegments.map((segment) => {
             const isGb = segment.unit === 'Gb/s'
             const pct = isGb ? (segment.bandwidth / 10) * 100 : (segment.bandwidth / 500) * 100
             return (
-              <div key={segment.id} className="rounded-xl border border-border bg-white p-4 shadow-sm dark:border-darkBorder dark:bg-darkCard">
+              <div key={segment.id} className="card-tile">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-sm font-medium text-textPrimary dark:text-darkTextPrimary">
                     <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
@@ -500,34 +454,22 @@ export default function Network() {
             )
           })}
         </div>
-      </section>
+      </Section>
 
-      <section>
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-          <Shield className="h-5 w-5 text-primary dark:text-darkPrimary" />
-          VPC Flow Logs
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Registros de tráfico simulados registrados por VPC Flow Logs.
-        </p>
-
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowTrafficLogs((previous) => !previous)}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40"
-          >
-            <Tags className="h-4 w-4" />
+      <Section
+        title="VPC Flow Logs"
+        icon={Shield}
+        description="Registros de tráfico simulados registrados por VPC Flow Logs."
+        badge={<Badge tone="warning">Simulación</Badge>}
+        actions={
+          <Button variant="accent" size="sm" icon={Tags} onClick={() => setShowTrafficLogs((previous) => !previous)}>
             {showTrafficLogs ? 'Ocultar logs de tráfico' : 'Ver logs de tráfico'}
-          </button>
-          <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-            Simulación
-          </span>
-        </div>
-
+          </Button>
+        }
+      >
         {showTrafficLogs && (
-          <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-white shadow-sm dark:border-darkBorder dark:bg-darkCard">
-            <table className="w-full min-w-[700px] text-sm">
+          <div className="table-wrap">
+            <table className="data-table min-w-[700px]">
               <thead>
                 <tr className="border-b border-border dark:border-darkBorder">
                   <th className="py-3 pl-6 pr-4 text-left text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">Fecha / hora</th>
@@ -563,19 +505,15 @@ export default function Network() {
             </table>
           </div>
         )}
-      </section>
+      </Section>
 
-      <section>
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-          <Shield className="h-5 w-5 text-primary dark:text-darkPrimary" />
-          Grupos de Seguridad
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Reglas de ingreso más relevantes por recurso.
-        </p>
-
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-border bg-white shadow-sm dark:border-darkBorder dark:bg-darkCard">
-          <table className="w-full min-w-[640px] text-sm">
+      <Section
+        title="Grupos de Seguridad"
+        icon={Shield}
+        description="Reglas de ingreso más relevantes por recurso."
+      >
+        <div className="table-wrap">
+          <table className="data-table min-w-[640px]">
             <thead>
               <tr className="border-b border-border dark:border-darkBorder">
                 <th className="py-3 pl-6 pr-4 text-left text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
@@ -626,7 +564,7 @@ export default function Network() {
             </tbody>
           </table>
         </div>
-      </section>
+      </Section>
     </div>
   )
 }

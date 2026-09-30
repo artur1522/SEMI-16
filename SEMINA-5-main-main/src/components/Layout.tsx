@@ -6,6 +6,13 @@ import Header from './Header'
 import OnboardingTour from './OnboardingTour'
 import { usePreferences } from '../hooks/usePreferences'
 
+/** Escala de espaciado global: 16 · 24 · 32 px. */
+const DENSITY_PADDING: Record<string, string> = {
+  compacto: 'p-4',
+  comodo: 'p-6',
+  espacioso: 'p-8'
+}
+
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { pathname } = useLocation()
@@ -29,35 +36,33 @@ export default function Layout() {
 
   useEffect(() => {
     setSidebarOpen(false)
+    document.getElementById('app-scroll')?.scrollTo({ top: 0 })
   }, [pathname])
 
-  const mainPadding =
-    preferences.density === 'compacto'
-      ? 'p-3 sm:p-4 lg:p-6'
-      : preferences.density === 'espacioso'
-        ? 'p-6 sm:p-8 lg:p-10'
-        : 'p-4 sm:p-6 lg:p-8'
+  const mainPadding = DENSITY_PADDING[preferences.density] ?? DENSITY_PADDING.comodo
 
   return (
     <div className="flex h-screen overflow-hidden bg-transparent">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex h-screen min-w-0 flex-1 flex-col overflow-y-auto md:ml-64">
-        <div className="sticky top-0 z-30 flex items-center gap-2 border-b border-white/40 bg-white/60 px-4 backdrop-blur-xl dark:border-darkBorder dark:bg-darkBackground/65 sm:px-6">
-          <button
-            type="button"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-textSecondary transition-all hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/30 dark:text-darkTextSecondary dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/30 md:hidden"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Abrir menú"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+      <div id="app-scroll" className="flex h-screen min-w-0 flex-1 flex-col overflow-y-auto md:ml-64">
+        <div className="sticky top-0 z-30 border-b border-border/70 bg-white/75 backdrop-blur-xl dark:border-darkBorder dark:bg-darkBackground/75">
+          <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
+            <button
+              type="button"
+              className="btn btn-ghost -ml-1 h-10 w-10 shrink-0 p-0 md:hidden"
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Abrir menú"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
 
-          <Header />
+            <Header />
+          </div>
         </div>
 
         <main className={`flex-1 ${mainPadding}`}>
-          <div className="mx-auto max-w-[1600px]">
+          <div className="mx-auto w-full max-w-[1600px]">
             <Outlet />
           </div>
         </main>

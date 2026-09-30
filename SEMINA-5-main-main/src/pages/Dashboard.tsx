@@ -9,17 +9,17 @@ import {
   DollarSign,
   Gauge,
   Info,
-  Key,
   LayoutGrid,
   List,
   Network,
   Server,
   ShieldCheck,
-  Settings,
+  Sparkles,
   type LucideIcon
 } from 'lucide-react'
 import CostDistribution from '../components/CostDistribution'
 import MaintenanceCard from '../components/MaintenanceCard'
+import ProjectCard from '../components/ProjectCard'
 import RangeSelector, { type RangeKey } from '../components/RangeSelector'
 import RegionFilter from '../components/RegionFilter'
 import RegionMap from '../components/RegionMap'
@@ -37,12 +37,11 @@ import { awsServices } from '../data/awsServices'
 import { deriveMetrics, useCloudStore } from '../store/cloudStore'
 import { usePreferences, useFormatters } from '../hooks/usePreferences'
 import { regionReferences } from '../data/regions'
+import { MODULE_META } from '../config/navigation'
+import { Badge, Button, PageHeader, ProgressBar, Section } from '../components/ui'
 import type { CloudLog, CloudServer } from '../types/cloud'
 
-const severityColors: Record<
-  CloudLog['severity'],
-  { icon: LucideIcon; classes: string }
-> = {
+const severityColors: Record<CloudLog['severity'], { icon: LucideIcon; classes: string }> = {
   critical: {
     icon: AlertCircle,
     classes: 'bg-danger/10 text-danger dark:bg-darkDanger/10 dark:text-darkDanger'
@@ -53,7 +52,7 @@ const severityColors: Record<
   },
   info: {
     icon: Info,
-    classes: 'bg-primary/10 text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary'
+    classes: 'bg-info/10 text-info dark:bg-darkInfo/10 dark:text-darkInfo'
   }
 }
 
@@ -70,7 +69,10 @@ const RANGE_LABELS: Record<RangeKey, string> = {
 }
 
 function formatRelative(timestamp: string): string {
-  const diffMinutes = Math.max(1, Math.round((Date.now() - new Date(timestamp).getTime()) / 60_000))
+  const diffMinutes = Math.max(
+    1,
+    Math.round((Date.now() - new Date(timestamp).getTime()) / 60_000)
+  )
   if (diffMinutes < 60) return `hace ${diffMinutes} min`
   const diffHours = Math.round(diffMinutes / 60)
   if (diffHours < 24) return `hace ${diffHours} h`
@@ -94,21 +96,26 @@ function computeUptimePercent(servers: CloudServer[]): number {
   if (servers.length === 0) return 100
   const total = servers.length
   const weighted = servers.reduce(
-    (sum, server) => sum + (server.status === 'active' ? 1 : server.status === 'warning' ? 0.998 : 0.99),
+    (sum, server) =>
+      sum + (server.status === 'active' ? 1 : server.status === 'warning' ? 0.998 : 0.99),
     0
   )
   return (weighted / total) * 100
 }
+
+const regionNameOf = (id: string) =>
+  regionReferences.find((region) => region.id === id)?.name ?? id
 
 export default function Dashboard() {
   const {
     servers,
     events,
     history,
-    proposals,
     monthlyBudgetLimit,
     securityScore,
-    networkSimulationActive
+    networkSimulationActive,
+    projects,
+    portfolio
   } = useCloudStore()
   const { preferences, updatePreferences } = usePreferences()
   const { formatCurrency } = useFormatters()
@@ -119,11 +126,15 @@ export default function Dashboard() {
   const [range, setRange] = useState<RangeKey>('30d')
   const [regionId, setRegionId] = useState('all')
 
-  const selectedRegion = regionId === 'all' ? null : regionReferences.find((r) => r.id === regionId)
+  const selectedRegion =
+    regionId === 'all' ? null : regionReferences.find((r) => r.id === regionId)
 
   const filteredServers = selectedRegion
     ? servers.filter((server) => server.regionId === selectedRegion.id)
     : servers
+  const scopedProjects = selectedRegion
+    ? projects.filter((project) => project.regionId === selectedRegion.id)
+    : projects
 
   const scoped = useMemo(() => deriveMetrics(filteredServers), [filteredServers])
   const displayedRegions = selectedRegion
@@ -168,98 +179,82 @@ export default function Dashboard() {
     ? '↑ pico anual simulado'
     : deriveTrend(annualSeries, '%', RANGE_LABELS[range])
 
-  const operationalRegions = displayedRegions.filter((region) => region.status === 'operational').length
+  const operationalRegions = displayedRegions.filter(
+    (region) => region.status === 'operational'
+  ).length
   const maxRegionServers = displayedRegions.reduce(
     (max, region) => Math.max(max, region.serversDeployed),
     1
   )
 
-  const securityItems = [
-    {
-      title: 'Identidades bajo control',
-      description: '24 usuarios activos y 8 roles configurados con políticas revisadas.',
-      status: 'active' as const,
-      icon: ShieldCheck
-    },
-    {
-      title: 'MFA incompleto',
-      description: 'MFA habilitado en el 72% de las cuentas. Se recomienda exigirlo en todas.',
-      status: 'warning' as const,
-      icon: Key
-    },
-    {
-      title: 'Parches pendientes',
-      description: '3 instancias EC2 presentan actualizaciones de seguridad sin aplicar.',
-      status: 'inactive' as const,
-      icon: AlertTriangle
-    }
-  ]
-
   const securityStatus =
     securityScore < 50 ? 'En riesgo' : securityScore <= 80 ? 'Requiere revisión' : 'Correcto'
 
-  const cloudResources = new Set(displayedRegions.flatMap((region) => region.deployedServices)).size
+  const cloudResources = new Set(
+    displayedRegions.flatMap((region) => region.deployedServices)
+  ).size
 
   const architectureStatus = trafficLoad
     ? 'Degradada'
-    : displayedRegions.some((region) => region.status === 'down')
-      ? 'Caída'
-      : displayedRegions.some((region) => region.status === 'degraded')
+    : scopedProjects.some((project) => project.network.health === 'degradado')
+      ? 'Degradada'
+      : scopedProjects.some((project) => project.network.health === 'saturado')
         ? 'Degradada'
         : 'Operativa'
 
   const scopedEvents = selectedRegion
     ? events.filter(
         (event) =>
-          event.message.includes(selectedRegion.name) || event.message.includes(selectedRegion.id)
+          event.message.includes(selectedRegion.name) ||
+          event.message.includes(selectedRegion.id)
       )
     : events
 
-  const fallbackAlerts = [
+  const fallbackAlerts: CloudLog[] = [
     {
       id: 'alert-default-1',
       timestamp: new Date(Date.now() - 4 * 60_000).toISOString(),
-      severity: 'warning' as const,
+      severity: 'warning',
       message: 'Pico de tráfico detectado en us-east-1 con latencia elevada.'
     },
     {
       id: 'alert-default-2',
       timestamp: new Date(Date.now() - 12 * 60_000).toISOString(),
-      severity: 'critical' as const,
+      severity: 'critical',
       message: 'RDS principal sin réplica activa en sa-east-1; requiere revisión.'
     },
     {
       id: 'alert-default-3',
       timestamp: new Date(Date.now() - 19 * 60_000).toISOString(),
-      severity: 'info' as const,
+      severity: 'info',
       message: 'Se detectó tráfico de alta demanda y balanceo desbalanceado.'
     }
   ]
 
-  const alertFeed = scopedEvents.length > 0 ? scopedEvents : trafficLoad ? fallbackAlerts : fallbackAlerts
+  const alertFeed = scopedEvents.length > 0 ? scopedEvents : fallbackAlerts
 
-  const sortedProposals = useMemo(
-    () =>
-      [...proposals].sort(
-        (first, second) =>
-          new Date(second.createdAt).getTime() - new Date(first.createdAt).getTime()
-      ),
-    [proposals]
-  )
-  const approvedProposal = sortedProposals.find((proposal) => proposal.status === 'aprobada')
-  const activeProposal = approvedProposal ?? sortedProposals[0]
-  const architectureSuggestion = activeProposal
+  const activeProject = useMemo(() => {
+    const order = [...projects].sort(
+      (first, second) =>
+        new Date(second.updatedAt).getTime() - new Date(first.updatedAt).getTime()
+    )
+    return order.find((project) => project.status === 'aprobada') ?? order[0]
+  }, [projects])
+
+  const architectureSuggestion = activeProject
     ? suggestArchitectures(
-        activeProposal.appType,
-        activeProposal.estimatedUsers,
-        activeProposal.availabilityLevel
+        activeProject.appType,
+        activeProject.estimatedUsers,
+        activeProject.availabilityLevel
       )[0]
     : undefined
+
   const activeServices = awsServices.filter((service) => service.status === 'active').length
   const costUsagePercent =
     monthlyBudgetLimit > 0
       ? Math.min(100, Math.round((scoped.totalMonthly / monthlyBudgetLimit) * 100))
       : 0
+
   const moduleCards: {
     label: string
     detail: string
@@ -269,106 +264,118 @@ export default function Dashboard() {
   }[] = [
     {
       label: 'Planificación',
-      detail: 'propuestas',
-      value: String(proposals.length),
+      detail: 'propuestas del portafolio',
+      value: String(portfolio.projects),
       to: '/planning',
-      icon: LayoutGrid
+      icon: MODULE_META['/planning'].icon
     },
     {
       label: 'Costos',
       detail: 'del presupuesto',
       value: `${costUsagePercent}%`,
       to: '/costs',
-      icon: DollarSign
+      icon: MODULE_META['/costs'].icon
     },
     {
       label: 'Infraestructura',
       detail: 'regiones operativas',
       value: `${operationalRegions}/${displayedRegions.length}`,
       to: '/infrastructure',
-      icon: Server
+      icon: MODULE_META['/infrastructure'].icon
     },
     {
       label: 'Seguridad',
-      detail: 'controles completados',
+      detail: 'score global',
       value: `${securityScore}%`,
       to: '/security',
-      icon: ShieldCheck
+      icon: MODULE_META['/security'].icon
     },
     {
       label: 'Red',
       detail: 'simulación de tráfico',
       value: networkSimulationActive ? 'Activa' : 'Inactiva',
       to: '/network',
-      icon: Network
+      icon: MODULE_META['/network'].icon
     },
     {
       label: 'Servicios',
       detail: 'servicios activos',
       value: String(activeServices),
       to: '/services',
-      icon: Boxes
+      icon: MODULE_META['/services'].icon
     },
     {
       label: 'Configuración',
       detail: 'moneda activa',
       value: preferences.currency,
       to: '/config',
-      icon: Settings
+      icon: MODULE_META['/config'].icon
+    }
+  ]
+
+  const overview = {
+    approved: portfolio.approved,
+    inReview: portfolio.inReview,
+    draft: portfolio.draft
+  }
+
+  const securityItems = [
+    {
+      title: 'Identidades bajo control',
+      description: `${portfolio.securityScore}% de cumplimiento promedio en el portafolio.`,
+      status: portfolio.securityScore >= 80 ? ('active' as const) : ('warning' as const),
+      icon: ShieldCheck
+    },
+    {
+      title: 'Hallazgos críticos',
+      description: `${portfolio.criticalFindings} hallazgos críticos abiertos en ${portfolio.criticalFindings === 1 ? '1 proyecto' : `${portfolio.criticalFindings} proyectos`}.`,
+      status: portfolio.criticalFindings === 0 ? ('active' as const) : ('inactive' as const),
+      icon: AlertTriangle
+    },
+    {
+      title: 'Alertas de seguridad',
+      description: `${portfolio.openAlerts} alertas abiertas asociadas a los proyectos del portafolio.`,
+      status: portfolio.openAlerts === 0 ? ('active' as const) : ('warning' as const),
+      icon: Activity
     }
   ]
 
   return (
-    <div className={compact ? 'space-y-5' : 'space-y-8'}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-bold text-textPrimary dark:text-darkTextPrimary">
-              Dashboard
-            </h1>
-            {selectedRegion && (
-               <span className="rounded-full border border-transparent bg-gradient-to-r from-accentFrom/10 to-accentTo/10 px-2 py-0.5 text-xs font-semibold text-accentFrom shadow-[0_0_10px_rgba(124,58,237,0.12)] dark:from-darkAccentFrom/20 dark:to-darkAccentTo/20 dark:text-darkAccentFrom dark:shadow-[0_0_10px_rgba(139,92,246,0.18)]">
-                {selectedRegion.name}
-              </span>
-            )}
-          </div>
-          <p className="mt-2 text-textSecondary dark:text-darkTextSecondary">
-            Resumen general de servicios, infraestructura y costos de la nube.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <RangeSelector value={range} onChange={setRange} />
-          <button
-            type="button"
-            onClick={() => updatePreferences('density', compact ? 'comodo' : 'compacto')}
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-xs font-semibold text-textPrimary transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/40"
-            title="Alternar vista compacta / detallada"
-          >
-            {compact ? <LayoutGrid className="h-4 w-4" /> : <List className="h-4 w-4" />}
-            {compact ? 'Vista detallada' : 'Vista compacta'}
-          </button>
-        </div>
-      </div>
+    <div className="page">
+      <PageHeader
+        eyebrow="Resumen ejecutivo"
+        title="Dashboard"
+        description="Resumen general de servicios, infraestructura y costos de la nube."
+        badge={
+          selectedRegion ? <Badge tone="info">{selectedRegion.name}</Badge> : undefined
+        }
+        actions={
+          <>
+            <RangeSelector value={range} onChange={setRange} />
+            <Button
+              variant="secondary"
+              icon={compact ? LayoutGrid : List}
+              onClick={() => updatePreferences('density', compact ? 'comodo' : 'compacto')}
+              title="Alternar vista compacta / detallada"
+            >
+              {compact ? 'Vista detallada' : 'Vista compacta'}
+            </Button>
+          </>
+        }
+      />
 
       <RegionFilter value={regionId} regions={regionReferences} onChange={setRegionId} />
 
       <RegionMap regions={displayedRegions} servers={filteredServers} />
 
       {!compact && (
-        <section>
-          <h2 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            Distribución de recursos por región
-          </h2>
-          <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-            Servidores y servicios activos por cada región, comparables a simple vista.
-          </p>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Section
+          title="Distribución de recursos por región"
+          description="Servidores y servicios activos por cada región, comparables a simple vista."
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {displayedRegions.map((region) => (
-              <article
-                key={region.id}
-                className="rounded-2xl border border-border bg-white p-4 shadow-sm dark:border-darkBorder dark:bg-darkCard"
-              >
+              <article key={region.id} className="card-tile">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
                     {region.name}
@@ -390,42 +397,66 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="flex items-center justify-between text-[11px] text-textSecondary dark:text-darkTextSecondary">
+                  <div className="flex items-center justify-between text-2xs text-textSecondary dark:text-darkTextSecondary">
                     <span>Servidores desplegados</span>
-                    <span>{Math.round((region.serversDeployed / maxRegionServers) * 100)}%</span>
+                    <span className="tabular-nums">
+                      {Math.round((region.serversDeployed / maxRegionServers) * 100)}%
+                    </span>
                   </div>
-                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-background dark:bg-darkBackground">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all duration-300 dark:bg-darkPrimary"
-                      style={{ width: `${(region.serversDeployed / maxRegionServers) * 100}%` }}
-                    />
-                  </div>
+                  <ProgressBar
+                    percent={(region.serversDeployed / maxRegionServers) * 100}
+                    className="mt-1"
+                  />
                 </div>
               </article>
             ))}
           </div>
-        </section>
+        </Section>
       )}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:items-start">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
         <div className="xl:col-span-2">
           <CloudWatchMetrics servers={filteredServers} trafficLoad={trafficLoad} />
         </div>
         <WellArchitectedScorecard servers={filteredServers} />
       </div>
 
-      <div className="grid grid-cols-1 gap-8 xl:grid-cols-3 xl:items-start">
-        <div className={compact ? 'space-y-5 xl:col-span-2' : 'space-y-8 xl:col-span-2'}>
-          <section>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-                Indicadores clave
-              </h2>
+      <Section
+        title="Portafolio de proyectos"
+        description="Fuente única de verdad: el mismo estado, costo y seguridad que consumen Planificación, Costos, Infraestructura y Seguridad."
+        actions={
+          <Link to="/planning" className="btn btn-secondary btn-sm">
+            Ver planificación
+          </Link>
+        }
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {scopedProjects.map((project) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              regionName={regionNameOf(project.regionId)}
+            />
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Badge tone="success">{overview.approved} aprobadas</Badge>
+          <Badge tone="warning">{overview.inReview} en revisión</Badge>
+          <Badge tone="danger">{overview.draft} borradores</Badge>
+        </div>
+      </Section>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3 xl:items-start">
+        <div className="space-y-6 xl:col-span-2">
+          <Section
+            title="Indicadores clave"
+            actions={
               <span className="text-xs text-textSecondary dark:text-darkTextSecondary">
                 Rango aplicado a los gráficos: {RANGE_LABELS[range]}
               </span>
-            </div>
-            <div className={`mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 ${compact ? 'sm:gap-4' : 'sm:gap-6'}`}>
+            }
+          >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <StatCardTrend
                 title="Servidores activos"
                 value={servicesValue}
@@ -465,9 +496,9 @@ export default function Dashboard() {
               />
               <StatCard title="Estado de la arquitectura" value={architectureStatus} icon={Network} />
             </div>
-          </section>
+          </Section>
 
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <TopCostServices items={scoped.costItems} />
             <MaintenanceCard region={selectedRegion?.name ?? 'todas las regiones'} />
           </div>
@@ -475,28 +506,17 @@ export default function Dashboard() {
           <CostDistribution data={scoped.costDistribution} />
         </div>
 
-        <aside className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-darkBorder dark:bg-darkCard xl:sticky xl:top-20">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-              Alertas y actividad reciente
-            </h2>
-            <div className="flex flex-col items-end gap-2">
-              <button
-                type="button"
-                onClick={() => setTrafficLoad((previous) => !previous)}
-                 className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
-                   trafficLoad
-                     ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_14px_rgba(124,58,237,0.2)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_14px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40'
-                     : 'border-border bg-background text-textPrimary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom dark:focus:ring-darkAccentFrom/40'
-                 }`}
-              >
-                <Gauge className="h-4 w-4" />
-                {trafficLoad ? 'Detener simulación' : 'Simular carga de tráfico'}
-              </button>
-              <span className="rounded-full bg-textSecondary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-textSecondary dark:bg-darkTextSecondary/10 dark:text-darkTextSecondary">
-                Simulación
-              </span>
-            </div>
+        <aside className="section-card xl:sticky xl:top-20">
+          <div className="section-head">
+            <h2 className="section-title">Alertas y actividad</h2>
+            <Button
+              variant={trafficLoad ? 'accent' : 'secondary'}
+              size="sm"
+              icon={Gauge}
+              onClick={() => setTrafficLoad((previous) => !previous)}
+            >
+              {trafficLoad ? 'Detener simulación' : 'Simular carga de tráfico'}
+            </Button>
           </div>
 
           <ul className="mt-2 max-h-80 divide-y divide-border overflow-y-auto dark:divide-darkBorder">
@@ -505,9 +525,7 @@ export default function Dashboard() {
               const Icon = meta.icon
               return (
                 <li key={event.id} className="flex animate-slide-in items-start gap-3 py-3">
-                  <span
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${meta.classes}`}
-                  >
+                  <span className={`icon-tile h-9 w-9 ${meta.classes}`}>
                     <Icon className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -530,95 +548,71 @@ export default function Dashboard() {
         </aside>
       </div>
 
-      {!compact && (
-        <section>
-          <h2 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-            Resumen de seguridad
-          </h2>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-            {securityItems.map(({ icon, ...item }) => (
-              <SecurityCard key={item.title} icon={icon} {...item} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-              Arquitectura de la solución
-            </h2>
-            <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-              Sigue la propuesta activa y salta directamente a cada módulo de la plataforma.
-            </p>
-          </div>
-          <Link
-            to="/planning"
-            className="inline-flex items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold text-textPrimary shadow-sm transition-all hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom"
-          >
-            Ver propuestas
-          </Link>
+      <Section title="Resumen de seguridad">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {securityItems.map(({ icon, ...item }) => (
+            <SecurityCard key={item.title} icon={icon} {...item} />
+          ))}
         </div>
+      </Section>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <article className="rounded-2xl border border-border bg-white p-5 shadow-sm dark:border-darkBorder dark:bg-darkCard">
+      <Section
+        title="Arquitectura de la solución"
+        description="Sigue el proyecto activo y salta directamente a cada módulo de la plataforma."
+        actions={
+          <Link to="/planning" className="btn btn-secondary btn-sm">
+            Ver proyectos
+          </Link>
+        }
+      >
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <article className="section-card-compact">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
-                  Propuesta activa
-                </p>
+              <div className="min-w-0">
+                <p className="eyebrow">Proyecto activo</p>
                 <h3 className="mt-1 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-                  {activeProposal?.solutionName ?? 'Sin propuesta disponible'}
+                  {activeProject?.name ?? 'Sin proyecto disponible'}
                 </h3>
               </div>
-              {activeProposal && (
-                <span className="rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success dark:bg-darkSuccess/10 dark:text-darkSuccess">
-                  {activeProposal.status === 'aprobada' ? 'Aprobada' : 'Más reciente'}
-                </span>
+              {activeProject && (
+                <Badge tone="success">
+                  {activeProject.status === 'aprobada' ? 'Aprobada' : 'Más reciente'}
+                </Badge>
               )}
             </div>
 
-            {activeProposal ? (
+            {activeProject ? (
               <>
-                {!approvedProposal && (
-                  <p className="mt-3 rounded-xl bg-warning/10 px-3 py-2 text-xs font-medium text-warning dark:bg-darkWarning/10 dark:text-darkWarning">
-                    Sin propuestas aprobadas aún, mostrando la más reciente
-                  </p>
-                )}
-                <div className="mt-4 flex items-center justify-between gap-3 border-b border-border pb-3 dark:border-darkBorder">
+                <div className="divider mt-4 flex items-center justify-between gap-3 pt-3">
                   <span className="text-xs text-textSecondary dark:text-darkTextSecondary">
                     Arquitectura sugerida
                   </span>
                   <strong className="text-right text-sm text-textPrimary dark:text-darkTextPrimary">
-                    {architectureSuggestion?.name ?? activeProposal.appType}
+                    {architectureSuggestion?.name ?? activeProject.appType}
                   </strong>
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-textSecondary dark:text-darkTextSecondary">
-                  {architectureSuggestion?.rationale ?? activeProposal.description}
+                  {architectureSuggestion?.rationale ?? activeProject.description}
                 </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {(architectureSuggestion?.stack ?? activeProposal.selectedServices).map((service) => (
-                    <span
-                      key={service}
-                      className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary"
-                    >
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {(architectureSuggestion?.stack ?? activeProject.services).map((service) => (
+                    <span key={service} className="badge badge-solid">
                       {service}
                     </span>
                   ))}
                 </div>
-                <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-background px-3 py-3 dark:bg-darkBackground">
+                <div className="panel-muted mt-4 flex items-center justify-between gap-3">
                   <span className="text-xs text-textSecondary dark:text-darkTextSecondary">
                     Estimación mensual
                   </span>
-                  <strong className="text-sm text-primary dark:text-darkPrimary">
+                  <strong className="text-sm text-accentFrom dark:text-darkAccentFrom">
                     {formatCurrency(architectureSuggestion?.estimatedCost ?? 0)}
                   </strong>
                 </div>
               </>
             ) : (
               <p className="mt-4 text-sm text-textSecondary dark:text-darkTextSecondary">
-                Crea una propuesta desde Planificación para ver aquí su arquitectura recomendada.
+                Crea un proyecto desde Planificación para ver aquí su arquitectura recomendada.
               </p>
             )}
           </article>
@@ -628,8 +622,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div>
-          <h3 className="text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
+        <div className="mt-6">
+          <h3 className="section-title">
+            <Sparkles className="h-4 w-4 text-accentFrom" aria-hidden="true" />
             Módulos de la plataforma
           </h3>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -637,29 +632,29 @@ export default function Dashboard() {
               <Link
                 key={label}
                 to={to}
-                 className="group flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-border bg-white p-3 shadow-sm transition-all hover:border-accentFrom/50 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 dark:border-darkBorder dark:bg-darkCard dark:hover:border-darkAccentFrom/50 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15"
+                className="card-tile flex min-w-0 items-center justify-between gap-3"
               >
-                <div className="flex min-w-0 items-center gap-2.5">
-                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accentFrom/10 text-accentFrom dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="icon-tile h-9 w-9 bg-accentFrom/10 text-accentFrom dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom">
                     <Icon className="h-4 w-4" />
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-semibold text-textPrimary dark:text-darkTextPrimary">
                       {label}
                     </span>
-                    <span className="block truncate text-[11px] text-textSecondary dark:text-darkTextSecondary">
+                    <span className="block truncate text-2xs text-textSecondary dark:text-darkTextSecondary">
                       {detail}
                     </span>
                   </span>
                 </div>
-                 <span className="shrink-0 text-right text-sm font-bold text-accentFrom dark:text-darkAccentFrom">
+                <span className="shrink-0 text-right text-sm font-bold tabular-nums text-accentFrom dark:text-darkAccentFrom">
                   {value}
                 </span>
               </Link>
             ))}
           </div>
         </div>
-      </section>
+      </Section>
     </div>
   )
 }

@@ -46,30 +46,28 @@ export default function ServiceCard({
       }
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      className={`flex cursor-pointer flex-col rounded-2xl border bg-white p-6 shadow-sm transition-all hover:shadow-md hover:ring-2 hover:ring-accentFrom/10 dark:bg-darkCard dark:hover:ring-darkAccentFrom/10 ${
+      className={`card-tile flex cursor-pointer flex-col ${
         compareSelected
-          ? 'border-accentFrom/50 bg-gradient-to-r from-accentFrom/10 via-white to-accentTo/10 ring-2 ring-accentFrom/20 dark:border-darkAccentFrom/50 dark:from-darkAccentFrom/15 dark:via-darkCard dark:to-darkAccentTo/15 dark:ring-darkAccentFrom/25'
-          : 'border-border dark:border-darkBorder'
+          ? 'border-accentFrom/60 ring-2 ring-accentFrom/25 dark:border-darkAccentFrom/60 dark:ring-darkAccentFrom/30'
+          : ''
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
+            <h3 className="text-base font-semibold text-textPrimary dark:text-darkTextPrimary">
               {service.name}
             </h3>
-            <span className="text-[10px] font-medium text-textSecondary dark:text-darkTextSecondary">
+            <span className="text-2xs text-textSecondary dark:text-darkTextSecondary">
               {service.fullName}
             </span>
           </div>
-          <span className="mt-1 inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary">
-            {service.category}
-          </span>
+          <span className="badge badge-solid mt-2">{service.category}</span>
         </div>
         <div className="flex items-center gap-2">
           {popularity > 0 && (
             <span
-              className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning dark:bg-darkWarning/10 dark:text-darkWarning"
+              className="badge badge-warning"
               title="Apariciones en propuestas de Planificación"
             >
               <Flame className="h-3.5 w-3.5" />
@@ -85,11 +83,7 @@ export default function ServiceCard({
                 onToggleCompare?.()
               }}
               aria-label={`${compareSelected ? 'Quitar' : 'Agregar'} ${service.name} a la comparación`}
-               className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-all ${
-                 compareSelected
-                   ? 'bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)]'
-                   : 'bg-background text-textSecondary hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-accentFrom dark:bg-darkBackground dark:text-darkTextSecondary dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkAccentFrom'
-               }`}
+              className={`btn btn-sm ${compareSelected ? 'btn-accent' : 'btn-secondary'}`}
             >
               {compareSelected ? (
                 <>
@@ -101,7 +95,10 @@ export default function ServiceCard({
               )}
             </button>
           ) : (
-            <Eye className="h-4 w-4 shrink-0 text-textSecondary dark:text-darkTextSecondary" aria-hidden="true" />
+            <Eye
+              className="h-4 w-4 shrink-0 text-textSecondary dark:text-darkTextSecondary"
+              aria-hidden="true"
+            />
           )}
         </div>
       </div>
@@ -110,8 +107,8 @@ export default function ServiceCard({
         {service.description}
       </p>
 
-      <div className="mt-4 flex items-start gap-2 rounded-xl bg-background p-3 text-sm text-textPrimary dark:bg-darkBackground dark:text-darkTextPrimary">
-        <Wrench className="mt-0.5 h-4 w-4 shrink-0 text-primary dark:text-darkPrimary" />
+      <div className="panel-muted mt-4 flex items-start gap-2 text-sm text-textPrimary dark:text-darkTextPrimary">
+        <Wrench className="mt-0.5 h-4 w-4 shrink-0 text-accentFrom dark:text-darkAccentFrom" />
         <p>
           <span className="font-semibold">Función principal: </span>
           {service.mainFunction}

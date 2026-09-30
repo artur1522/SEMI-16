@@ -1,4 +1,5 @@
 import { Activity, Check, ChevronDown, Coins, Monitor, RotateCcw, Server, Timer, type LucideIcon } from 'lucide-react'
+import { Button, PageHeader, Section } from '../components/ui'
 import { usePreferences, type Currency, type Density, type TimeUnit } from '../hooks/usePreferences'
 import { useCloudStore } from '../store/cloudStore'
 
@@ -49,7 +50,7 @@ function Select<T extends string>({
         <select
           value={value}
           onChange={(event) => onChange(event.target.value as T)}
-          className="w-full appearance-none rounded-xl border border-border bg-background px-4 py-3 pr-10 text-sm font-medium text-textPrimary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20"
+          className="select pr-10 font-medium"
         >
           {options.map((option) => (
             <option key={option.value} value={option.value}>
@@ -130,26 +131,19 @@ export default function Config() {
   const operationalRegions = regions.filter((region) => region.status === 'operational').length
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-          Configuración
-        </h1>
-        <p className="mt-2 text-textSecondary dark:text-darkTextSecondary">
-          Preferencias de la aplicación. Se guardan localmente en este navegador.
-        </p>
-      </div>
+    <div className="page">
+      <PageHeader
+        eyebrow="Preferencias"
+        title="Configuración"
+        description="Preferencias de la aplicación. Se guardan localmente en este navegador."
+      />
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-          <Coins className="h-5 w-5 text-primary dark:text-darkPrimary" />
-          Preferencias generales
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Estos ajustes aplican a todo el panel: costos, duraciones y espaciado de la interfaz.
-        </p>
-
-        <div className="mt-6 space-y-8">
+      <Section
+        title="Preferencias generales"
+        icon={Coins}
+        description="Estos ajustes aplican a todo el panel: costos, duraciones y espaciado de la interfaz."
+      >
+        <div className="space-y-8">
           <Select
             icon={Coins}
             label="Moneda mostrada"
@@ -174,93 +168,68 @@ export default function Config() {
             onChange={(value) => updatePreferences('density', value)}
           />
         </div>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-          <Activity className="h-5 w-5 text-primary dark:text-darkPrimary" />
-          Estado del sistema
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Fuente única de datos del panel: servidores, propuestas y regiones provienen del mismo
-          store central.
-        </p>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-border bg-background p-4 text-center dark:border-darkBorder dark:bg-darkBackground">
+      <Section
+        title="Estado del sistema"
+        icon={Activity}
+        description="Fuente única de datos del panel: servidores, propuestas y regiones provienen del mismo store central."
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="panel-muted text-center">
             <Server className="mx-auto h-5 w-5 text-primary dark:text-darkPrimary" />
-            <p className="mt-2 text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-              {servers.length}
-            </p>
-            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
+            <p className="metric-value">{servers.length}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
               Servidores
             </p>
           </div>
 
-          <div className="rounded-xl border border-border bg-background p-4 text-center dark:border-darkBorder dark:bg-darkBackground">
+          <div className="panel-muted text-center">
             <Coins className="mx-auto h-5 w-5 text-primary dark:text-darkPrimary" />
-            <p className="mt-2 text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-              {proposals.length}
-            </p>
-            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
+            <p className="metric-value">{proposals.length}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
               Propuestas
             </p>
           </div>
 
-          <div className="rounded-xl border border-border bg-background p-4 text-center dark:border-darkBorder dark:bg-darkBackground">
+          <div className="panel-muted text-center">
             <Activity className="mx-auto h-5 w-5 text-success dark:text-darkSuccess" />
-            <p className="mt-2 text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-              {operationalRegions}
-            </p>
-            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
+            <p className="metric-value">{operationalRegions}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
               Regiones operativas
             </p>
           </div>
         </div>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard">
-        <h2 className="text-lg font-semibold text-textPrimary dark:text-darkTextPrimary">
-          Tour de bienvenida
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          ¿Quieres volver a ver la guía de introducción que se muestra la primera vez que abres la
-          aplicación?
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => updatePreferences('onboardingSeen', false)}
-            className="rounded-xl bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 px-4 py-2 text-sm font-semibold text-white shadow-[0_0_16px_rgba(124,58,237,0.2)] transition-all hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-accentFrom/40 dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_16px_rgba(139,92,246,0.26)] dark:focus:ring-darkAccentFrom/40"
-          >
+      <Section title="Tour de bienvenida" icon={Monitor}
+        description="¿Quieres volver a ver la guía de introducción que se muestra la primera vez que abres la aplicación?"
+      >
+        <div className="flex flex-wrap gap-2">
+          <Button variant="accent" onClick={() => updatePreferences('onboardingSeen', false)}>
             Volver a mostrar el tour
-          </button>
-          <button
-            type="button"
-            onClick={() => updatePreferences('onboardingSeen', true)}
-            className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-textSecondary transition-colors hover:bg-background hover:text-textPrimary dark:border-darkBorder dark:text-darkTextSecondary dark:hover:bg-darkBackground dark:hover:text-darkTextPrimary"
-          >
+          </Button>
+          <Button variant="secondary" onClick={() => updatePreferences('onboardingSeen', true)}>
             No volver a mostrar
-          </button>
+          </Button>
         </div>
-      </section>
+      </Section>
 
-      <section className="rounded-2xl border border-danger/20 bg-danger/5 p-6 dark:border-darkDanger/20 dark:bg-darkDanger/5">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-danger dark:text-darkDanger">
-          <RotateCcw className="h-5 w-5" />
-          Restablecer preferencias
-        </h2>
-        <p className="mt-1 text-sm text-textSecondary dark:text-darkTextSecondary">
-          Vuelve a los valores por defecto: dólar, días y densidad cómoda.
+      <Section
+        title="Restablecer preferencias"
+        icon={RotateCcw}
+        description="Vuelve a los valores por defecto: dólar, días y densidad cómoda."
+        className="border-danger/20 bg-danger/5 dark:border-darkDanger/20 dark:bg-darkDanger/5"
+        actions={
+          <Button variant="danger" icon={RotateCcw} onClick={resetPreferences}>
+            Restablecer todo
+          </Button>
+        }
+      >
+        <p className="text-xs text-textSecondary dark:text-darkTextSecondary">
+          Esta acción solo afecta las preferencias de este navegador; no borra propuestas ni datos del store.
         </p>
-        <button
-          type="button"
-          onClick={resetPreferences}
-          className="mt-4 rounded-xl border border-danger/30 bg-white px-4 py-2 text-sm font-semibold text-danger transition-colors hover:bg-danger hover:text-white focus:outline-none focus:ring-2 focus:ring-danger/40 dark:bg-darkCard dark:hover:bg-darkDanger"
-        >
-          Restablecer todo
-        </button>
-      </section>
+      </Section>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { ArrowDownUp, Flame, Search, Shuffle, X } from 'lucide-react'
 import ExportMenu from '../components/ExportMenu'
 import ServiceCard from '../components/ServiceCard'
 import ServiceDetailModal from '../components/ServiceDetailModal'
+import { ChipTabs, EmptyState, PageHeader, Section } from '../components/ui'
 import { awsServices } from '../data/awsServices'
 import { useCloudStore } from '../store/cloudStore'
 import type { Service } from '../types/cloud'
@@ -120,58 +121,57 @@ export default function Services() {
   ]
 
   return (
-    <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-textPrimary dark:text-darkTextPrimary">
-            Servicios AWS
-          </h1>
-          <p className="mt-2 text-textSecondary dark:text-darkTextSecondary">
+    <div className="page">
+      <PageHeader
+        eyebrow="Catálogo"
+        title="Servicios AWS"
+        description={
+          <>
             {filteredServices.length} servicio{filteredServices.length !== 1 && 's'} encontrado
             {filteredServices.length !== 1 && 's'}
             {totalPopular > 0 && <> · {totalPopular} aparición{totalPopular !== 1 && 'es'} en propuestas</>}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          <label className="relative inline-flex items-center">
-            <ArrowDownUp className="pointer-events-none absolute left-3 h-4 w-4 text-textSecondary dark:text-darkTextSecondary" />
-            <select
-              value={sortBy}
-              onChange={(event) => setSortBy(event.target.value as SortKey)}
-              aria-label="Ordenar servicios"
-              className="w-full appearance-none rounded-xl border border-border bg-white py-2 pl-9 pr-8 text-sm text-textPrimary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20 sm:w-44"
-            >
-              {(Object.keys(sortLabels) as SortKey[]).map((key) => (
-                <option key={key} value={key}>
-                  Ordenar por {sortLabels[key]}
-                </option>
-              ))}
-            </select>
-            <ArrowDownUp className="pointer-events-none absolute right-2.5 h-4 w-4 rotate-180 text-textSecondary dark:text-darkTextSecondary" />
-          </label>
-
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textSecondary dark:text-darkTextSecondary" />
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar por nombre o descripción..."
-              className="w-full rounded-xl border border-border bg-white py-2 pl-9 pr-8 text-sm text-textPrimary placeholder:text-textSecondary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20 sm:w-64"
-            />
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                aria-label="Limpiar búsqueda"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-textSecondary hover:text-danger dark:text-darkTextSecondary dark:hover:text-darkDanger"
+          </>
+        }
+        actions={
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <label className="relative inline-flex items-center">
+              <ArrowDownUp className="pointer-events-none absolute left-3 h-4 w-4 text-textSecondary dark:text-darkTextSecondary" />
+              <select
+                value={sortBy}
+                onChange={(event) => setSortBy(event.target.value as SortKey)}
+                aria-label="Ordenar servicios"
+                className="select pl-9 sm:w-44"
               >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <ExportMenu
+                {(Object.keys(sortLabels) as SortKey[]).map((key) => (
+                  <option key={key} value={key}>
+                    Ordenar por {sortLabels[key]}
+                  </option>
+                ))}
+              </select>
+              <ArrowDownUp className="pointer-events-none absolute right-2.5 h-4 w-4 rotate-180 text-textSecondary dark:text-darkTextSecondary" />
+            </label>
+
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textSecondary dark:text-darkTextSecondary" />
+              <input
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar por nombre o descripción..."
+                className="input pl-9 pr-8 sm:w-64"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-textSecondary hover:text-danger dark:text-darkTextSecondary dark:hover:text-darkDanger"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <ExportMenu
             fileName="servicios-filtrados"
             title="Reporte de servicios AWS"
             headers={['ID', 'Servicio', 'Nombre completo', 'Categoría', 'Estado', 'Popularidad', 'Descripción', 'Función principal', 'Cuotas', 'Alternativas', 'Documentación']}
@@ -198,64 +198,42 @@ export default function Services() {
               { label: 'Apariciones en propuestas', value: filteredServices.reduce((sum, service) => sum + (popularity.get(service.id) ?? 0), 0) }
             ]}
           />
-        </div>
-      </div>
+          </div>
+        }
+      />
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setCategory('all')}
-           className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
-             category === 'all'
-               ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
-               : 'border-border bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary dark:focus:ring-darkAccentFrom/40'
-           }`}
-        >
-          Todos
-        </button>
-        {categoryOrder.map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setCategory(key)}
-             className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-accentFrom/40 ${
-               category === key
-                 ? 'border-transparent bg-slate-950 bg-gradient-to-r from-accentFrom/90 to-accentTo/90 text-white shadow-[0_0_12px_rgba(124,58,237,0.18)] dark:from-darkAccentFrom/90 dark:to-darkAccentTo/90 dark:shadow-[0_0_12px_rgba(139,92,246,0.24)] dark:focus:ring-darkAccentFrom/40'
-                 : 'border-border bg-white text-textSecondary hover:border-accentFrom/40 hover:bg-gradient-to-r hover:from-accentFrom/10 hover:to-accentTo/10 hover:text-textPrimary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:hover:border-darkAccentFrom/40 dark:hover:from-darkAccentFrom/15 dark:hover:to-darkAccentTo/15 dark:hover:text-darkTextPrimary dark:focus:ring-darkAccentFrom/40'
-             }`}
-          >
-            {categoryLabels[key] ?? key}
-          </button>
-        ))}
-      </div>
+      <ChipTabs
+        ariaLabel="Filtrar por categoría"
+        options={[
+          { value: 'all', label: 'Todos' },
+          ...categoryOrder.map((key) => ({ value: key, label: categoryLabels[key] ?? key }))
+        ]}
+        value={category}
+        onChange={setCategory}
+      />
 
       {compareServices.length === 1 && (
-        <p className="mt-4 rounded-xl border border-border bg-white p-3 text-sm text-textSecondary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary">
-          <Shuffle className="mr-1.5 inline h-4 w-4" />
+        <p className="hint-bar mt-4">
+          <Shuffle className="mt-0.5 h-4 w-4 shrink-0" />
           Selecciona un segundo servicio para compararlos lado a lado.
         </p>
       )}
 
       {compareServices.length === 2 && (
-        <section className="mt-6 overflow-hidden rounded-2xl border border-border bg-white shadow-sm dark:border-darkBorder dark:bg-darkCard">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4 dark:border-darkBorder">
-            <div className="flex items-center gap-2">
-              <Shuffle className="h-5 w-5 text-primary dark:text-darkPrimary" />
-              <h2 className="text-base font-semibold text-textPrimary dark:text-darkTextPrimary">
-                Comparación lado a lado
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={clearCompare}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-textSecondary transition-colors hover:bg-background hover:text-danger dark:border-darkBorder dark:text-darkTextSecondary dark:hover:bg-darkBackground dark:hover:text-darkDanger"
-            >
+        <Section
+          title="Comparación lado a lado"
+          icon={Shuffle}
+          actions={
+            <button type="button" onClick={clearCompare} className="btn btn-ghost btn-sm text-danger dark:text-darkDanger">
               <X className="h-3.5 w-3.5" />
               Limpiar comparación
             </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px] text-sm">
+          }
+          className="mt-2 overflow-hidden p-0"
+          bodyClassName="mt-0"
+        >
+          <div className="table-wrap border-0 shadow-none">
+            <table className="data-table min-w-[600px]">
               <thead>
                 <tr className="border-b border-border dark:border-darkBorder">
                   <th className="w-40 px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary">
@@ -294,7 +272,7 @@ export default function Services() {
               </tbody>
             </table>
           </div>
-        </section>
+        </Section>
       )}
 
       {filteredServices.length > 0 ? (
@@ -312,9 +290,13 @@ export default function Services() {
           ))}
         </div>
       ) : (
-        <p className="mt-6 rounded-2xl border border-border bg-white p-6 text-center text-textSecondary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary">
-          No se encontraron servicios con los filtros seleccionados.
-        </p>
+        <div className="mt-6">
+          <EmptyState
+            icon={Search}
+            title="Sin resultados"
+            description="No se encontraron servicios con los filtros seleccionados."
+          />
+        </div>
       )}
 
       {selectedService && (

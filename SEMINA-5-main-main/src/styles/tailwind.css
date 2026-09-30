@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   CLOUDOPS · SISTEMA DE DISEÑO GLOBAL
+   Escala de espaciado:  4 · 8 · 12 · 16 · 24 · 32  (gap-4 / gap-6 / space-y-8)
+   Jerarquía tipográfica: eyebrow → page-title → section-title → body → caption
+   Estados:  verde = aprobada/online · ámbar = en revisión/pendiente
+             rojo  = crítico/borrador  · índigo/violeta = info/acción
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @layer base {
   html {
     height: 100%;
@@ -19,8 +27,8 @@
 
   body {
     background:
-      radial-gradient(circle at top left, rgba(168, 85, 247, 0.18), transparent 28%),
-      radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.14), transparent 26%),
+      radial-gradient(circle at top left, rgba(168, 85, 247, 0.14), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.12), transparent 26%),
       linear-gradient(135deg, #f8f7ff 0%, #f4f1ff 40%, #f8fafc 100%);
     color: theme('colors.textPrimary');
     transition: background-color 200ms ease, color 200ms ease;
@@ -28,10 +36,18 @@
 
   html.dark body {
     background:
-      radial-gradient(circle at top left, rgba(139, 92, 246, 0.24), transparent 30%),
-      radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.18), transparent 26%),
+      radial-gradient(circle at top left, rgba(139, 92, 246, 0.22), transparent 30%),
+      radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.16), transparent 26%),
       linear-gradient(135deg, #0f0b24 0%, #140d2d 40%, #120f2e 100%);
     color: theme('colors.darkTextPrimary');
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
   }
 
   body,
@@ -48,15 +64,277 @@
     transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease,
       fill 200ms ease, stroke 200ms ease;
   }
+
+  :focus-visible {
+    outline: none;
+  }
+}
+
+@layer components {
+  /* ── Layout de página ─────────────────────────────────────────────────── */
+  .page {
+    @apply flex flex-col gap-6 sm:gap-8;
+  }
+
+  .page-header {
+    @apply flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between;
+  }
+
+  .page-eyebrow {
+    @apply mb-1 block text-xs font-semibold uppercase tracking-wider text-accentFrom dark:text-darkAccentFrom;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl dark:text-darkTextPrimary;
+  }
+
+  .page-subtitle {
+    @apply mt-2 max-w-3xl text-sm text-textSecondary sm:text-base dark:text-darkTextSecondary;
+  }
+
+  .page-actions {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  /* ── Secciones y tarjetas ─────────────────────────────────────────────── */
+  .section-card {
+    @apply rounded-card border border-border bg-surface p-5 shadow-card dark:border-darkBorder dark:bg-darkCard dark:shadow-dark-card sm:p-6;
+  }
+
+  .section-card-compact {
+    @apply rounded-card border border-border bg-surface p-4 shadow-card dark:border-darkBorder dark:bg-darkCard dark:shadow-dark-card;
+  }
+
+  .section-head {
+    @apply flex flex-wrap items-start justify-between gap-3;
+  }
+
+  .section-title {
+    @apply flex items-center gap-2 text-base font-semibold text-textPrimary sm:text-lg dark:text-darkTextPrimary;
+  }
+
+  .section-subtitle {
+    @apply mt-1 max-w-3xl text-sm text-textSecondary dark:text-darkTextSecondary;
+  }
+
+  .section-body {
+    @apply mt-4;
+  }
+
+  .card-tile {
+    @apply rounded-card border border-border bg-surface p-4 shadow-card transition-all dark:border-darkBorder dark:bg-darkCard dark:shadow-dark-card;
+  }
+
+  .card-tile:hover {
+    @apply border-accentFrom/40 shadow-card-hover dark:border-darkAccentFrom/40;
+  }
+
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-wider text-textSecondary dark:text-darkTextSecondary;
+  }
+
+  .metric-value {
+    @apply mt-1 truncate text-2xl font-bold tabular-nums text-textPrimary dark:text-darkTextPrimary;
+  }
+
+  .metric-label {
+    @apply truncate text-sm font-medium text-textSecondary dark:text-darkTextSecondary;
+  }
+
+  .icon-tile {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl;
+  }
+
+  .divider {
+    @apply border-t border-border dark:border-darkBorder;
+  }
+
+  /* ── Botones (jerarquía: primario › secundario › fantasma › peligro) ─── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-control border px-3.5 py-2 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accentFrom/40 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-darkAccentFrom/40;
+  }
+
+  .btn-sm {
+    @apply px-2.5 py-1 text-xs;
+  }
+
+  .btn-lg {
+    @apply px-4 py-2.5 text-sm;
+  }
+
+  .btn-primary {
+    @apply border-transparent bg-primary text-white shadow-[0_6px_16px_rgba(37,99,235,0.28)] hover:bg-blue-700 dark:bg-darkPrimary dark:hover:bg-blue-500;
+  }
+
+  .btn-accent {
+    @apply border-transparent bg-gradient-to-r from-accentFrom to-accentTo text-white shadow-[0_6px_16px_rgba(124,58,237,0.28)] hover:brightness-110 dark:from-darkAccentFrom dark:to-darkAccentTo;
+  }
+
+  .btn-secondary {
+    @apply border-border bg-surface text-textPrimary hover:border-accentFrom/40 hover:bg-accentFrom/5 hover:text-accentFrom dark:border-darkBorder dark:bg-darkCard dark:text-darkTextPrimary dark:hover:border-darkAccentFrom/40 dark:hover:bg-darkAccentFrom/10 dark:hover:text-darkAccentFrom;
+  }
+
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-textSecondary hover:bg-textSecondary/10 hover:text-textPrimary dark:text-darkTextSecondary dark:hover:bg-white/5 dark:hover:text-darkTextPrimary;
+  }
+
+  .btn-danger {
+    @apply border-transparent bg-danger/10 text-danger hover:bg-danger hover:text-white dark:bg-darkDanger/10 dark:text-darkDanger dark:hover:bg-darkDanger dark:hover:text-white;
+  }
+
+  /* ── Badges / etiquetas ───────────────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold leading-5;
+  }
+
+  .badge-dot {
+    @apply h-1.5 w-1.5 shrink-0 rounded-full bg-current;
+  }
+
+  .badge-success {
+    @apply border-success/30 bg-success/10 text-success dark:border-darkSuccess/30 dark:bg-darkSuccess/10 dark:text-darkSuccess;
+  }
+
+  .badge-warning {
+    @apply border-warning/30 bg-warning/10 text-warning dark:border-darkWarning/30 dark:bg-darkWarning/10 dark:text-darkWarning;
+  }
+
+  .badge-danger {
+    @apply border-danger/30 bg-danger/10 text-danger dark:border-darkDanger/30 dark:bg-darkDanger/10 dark:text-darkDanger;
+  }
+
+  .badge-info {
+    @apply border-info/30 bg-info/10 text-info dark:border-darkInfo/30 dark:bg-darkInfo/10 dark:text-darkInfo;
+  }
+
+  .badge-neutral {
+    @apply border-border bg-textSecondary/10 text-textSecondary dark:border-darkBorder dark:bg-darkTextSecondary/10 dark:text-darkTextSecondary;
+  }
+
+  .badge-accent {
+    @apply border-accentFrom/30 bg-accentFrom/10 text-accentFrom dark:border-darkAccentFrom/30 dark:bg-darkAccentFrom/10 dark:text-darkAccentFrom;
+  }
+
+  .badge-solid {
+    @apply border-transparent bg-primary/10 text-primary dark:bg-darkPrimary/10 dark:text-darkPrimary;
+  }
+
+  /* ── Píldoras / filtros ───────────────────────────────────────────────── */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3.5 py-1.5 text-xs font-semibold text-textSecondary transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accentFrom/40 dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary dark:focus-visible:ring-darkAccentFrom/40;
+  }
+
+  .chip:hover {
+    @apply border-accentFrom/40 text-textPrimary dark:border-darkAccentFrom/40 dark:text-darkTextPrimary;
+  }
+
+  .chip-active {
+    @apply border-transparent bg-gradient-to-r from-accentFrom to-accentTo text-white shadow-[0_6px_14px_rgba(124,58,237,0.25)] hover:brightness-110 dark:from-darkAccentFrom dark:to-darkAccentTo;
+  }
+
+  .chip-active:hover {
+    @apply text-white;
+  }
+
+  .segmented {
+    @apply inline-flex rounded-control border border-border bg-surface p-1 dark:border-darkBorder dark:bg-darkCard;
+  }
+
+  .segmented-item {
+    @apply rounded-lg px-3 py-1.5 text-xs font-semibold text-textSecondary transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-accentFrom/30 dark:text-darkTextSecondary;
+  }
+
+  .segmented-item:hover {
+    @apply text-textPrimary dark:text-darkTextPrimary;
+  }
+
+  .segmented-item-active {
+    @apply bg-gradient-to-r from-accentFrom to-accentTo text-white shadow-sm dark:from-darkAccentFrom dark:to-darkAccentTo;
+  }
+
+  .segmented-item-active:hover {
+    @apply text-white;
+  }
+
+  /* ── Formularios ──────────────────────────────────────────────────────── */
+  .field {
+    @apply block;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-textSecondary dark:text-darkTextSecondary;
+  }
+
+  .input {
+    @apply w-full rounded-control border border-border bg-surface px-3 py-2 text-sm text-textPrimary placeholder:text-textSecondary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 disabled:opacity-60 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20;
+  }
+
+  .select {
+    @apply w-full appearance-none rounded-control border border-border bg-surface px-3 py-2 pr-9 text-sm text-textPrimary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20;
+  }
+
+  .textarea {
+    @apply w-full resize-y rounded-control border border-border bg-surface px-3 py-2 text-sm text-textPrimary placeholder:text-textSecondary focus:border-accentFrom focus:outline-none focus:ring-2 focus:ring-accentFrom/20 dark:border-darkBorder dark:bg-darkBackground dark:text-darkTextPrimary dark:placeholder:text-darkTextSecondary dark:focus:border-darkAccentFrom dark:focus:ring-darkAccentFrom/20;
+  }
+
+  .input-error {
+    @apply border-danger dark:border-darkDanger;
+  }
+
+  .field-error {
+    @apply mt-1 block text-xs font-medium text-danger dark:text-darkDanger;
+  }
+
+  .field-hint {
+    @apply mt-1 block text-xs text-textSecondary dark:text-darkTextSecondary;
+  }
+
+  /* ── Tablas ───────────────────────────────────────────────────────────── */
+  .table-wrap {
+    @apply w-full overflow-x-auto rounded-card border border-border bg-surface shadow-card dark:border-darkBorder dark:bg-darkCard dark:shadow-dark-card;
+  }
+
+  .data-table {
+    @apply w-full min-w-[640px] text-left text-sm;
+  }
+
+  .data-table th {
+    @apply border-b border-border bg-background/70 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-textSecondary dark:border-darkBorder dark:bg-darkBackground/60 dark:text-darkTextSecondary;
+  }
+
+  .data-table td {
+    @apply border-b border-border/70 px-4 py-3 align-middle text-textPrimary dark:border-darkBorder/70 dark:text-darkTextPrimary;
+  }
+
+  .data-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .data-table tbody tr:hover {
+    @apply bg-background/60 dark:bg-darkBackground/50;
+  }
+
+  /* ── Utilidades varias ────────────────────────────────────────────────── */
+  .panel-muted {
+    @apply rounded-control border border-border bg-background p-4 dark:border-darkBorder dark:bg-darkBackground;
+  }
+
+  .hint-bar {
+    @apply flex items-start gap-2 rounded-control border border-accentFrom/20 bg-gradient-to-r from-accentFrom/5 to-accentTo/5 p-3 text-xs leading-relaxed text-textSecondary dark:border-darkAccentFrom/30 dark:from-darkAccentFrom/10 dark:to-darkAccentTo/10 dark:text-darkTextSecondary;
+  }
+
+  .empty-state {
+    @apply rounded-card border border-dashed border-border bg-surface p-8 text-center text-sm text-textSecondary dark:border-darkBorder dark:bg-darkCard dark:text-darkTextSecondary;
+  }
 }
 
 @layer utilities {
   .glass-card {
-    @apply border border-white/40 bg-white/60 shadow-[0_12px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/40 dark:shadow-[0_18px_45px_rgba(15,23,42,0.35)];
+    @apply border border-white/40 bg-white/60 shadow-card backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/40 dark:shadow-dark-card;
   }
 
   .soft-panel {
-    @apply rounded-2xl border border-white/30 bg-white/55 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/40;
+    @apply rounded-card border border-white/30 bg-white/55 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/40;
   }
 
   .animate-slide-in {

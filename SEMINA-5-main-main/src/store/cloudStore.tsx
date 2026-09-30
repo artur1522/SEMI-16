@@ -12,125 +12,58 @@ import type {
 } from '../types/cloud'
 import { regionReferences } from '../data/regions'
 import { getServerMeaning } from '../data/serverNames'
+import {
+  CLOUD_PROJECTS,
+  COST_CATEGORY_COLORS,
+  HOURS_PER_MONTH,
+  MONTHLY_BUDGET_LIMIT,
+  SECURITY_CONTROL_TOTAL,
+  SERVICE_CATEGORY,
+  UNIT_COSTS,
+  portfolioTotals,
+  type CloudProject,
+  type PortfolioTotals
+} from '../data/cloudOpsData'
 
-const UNIT_COSTS: Record<string, number> = {
-  ec2: 120,
-  s3: 0.023,
-  rds: 185,
-  iam: 0,
-  vpc: 45,
-  route53: 5,
-  cloudfront: 95.5
-}
+const CATEGORY_COLORS: Record<string, string> = COST_CATEGORY_COLORS
 
-const CATEGORY_MAP: Record<string, CostCategory> = {
-  ec2: 'Compute',
-  s3: 'Storage',
-  rds: 'Database',
-  vpc: 'Networking',
-  route53: 'Networking',
-  cloudfront: 'Networking'
-}
+/** Presupuesto global del portafolio (suma de los presupuestos por proyecto). */
+const MONTHLY_BUDGET = portfolioTotals(CLOUD_PROJECTS).monthlyBudget || MONTHLY_BUDGET_LIMIT
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Compute: '#2563EB',
-  Storage: '#06B6D4',
-  Database: '#F59E0B',
-  Networking: '#16A34A',
-  DNS: '#4F46E5',
-  CDN: '#DC2626',
-  Security: '#7C3AED'
-}
+const PROPOSALS_STORAGE_KEY = 'cloudops-proposals-v2'
 
-const HOURS_PER_MONTH = 730
+/** Estado inicial de los controles: mayoría del portafolio centralizado. */
+const initialSecurityControls: Record<string, boolean> = (() => {
+  const controlIds = Array.from(
+    new Set(CLOUD_PROJECTS.flatMap((project) => project.security.controls.map((c) => c.id)))
+  )
+  return controlIds.reduce<Record<string, boolean>>((acc, id) => {
+    const withControl = CLOUD_PROJECTS.filter((project) =>
+      project.security.controls.some((control) => control.id === id)
+    )
+    const done = withControl.filter((project) =>
+      project.security.controls.find((control) => control.id === id)?.done
+    ).length
+    acc[id] = withControl.length > 0 && done > withControl.length / 2
+    return acc
+  }, {})
+})()
 
-const PROPOSALS_STORAGE_KEY = 'cloudops-proposals'
-const MONTHLY_BUDGET_LIMIT = 4000
-const SECURITY_CONTROL_TOTAL = 8
-
-const initialSecurityControls: Record<string, boolean> = {
-  mfa: true,
-  keys: false,
-  cifrado: true,
-  tls: true,
-  parches: false,
-  logs: true,
-  sg: true,
-  backup: false
-}
-
-const initialProposals: CloudProposal[] = [
-  {
-    id: 'prop-seed-1',
-    solutionName: 'E-Commerce Multirregión',
-    appType: 'Web / API',
-    description: 'Tienda en línea con catálogo, pasarela de pagos y panel de administración replicado en varias regiones.',
-    region: 'sa-east-1',
-    estimatedUsers: 50000,
-    availabilityLevel: 'alta',
-    selectedServices: ['ec2', 'rds', 's3', 'cloudfront', 'route53'],
-    migrationGoal: 'Atender picos de tráfico regionales manteniendo latencia baja en Sudamérica.',
-    status: 'aprobada',
-    priority: 'alta',
-    createdAt: '2026-08-14T14:30:00.000Z'
-  },
-  {
-    id: 'prop-seed-2',
-    solutionName: 'Portal Académico SENATI',
-    appType: 'Web',
-    description: 'Portal de gestión académica con matrículas, notas y aula virtual para alumnos y docentes.',
-    region: 'us-east-1',
-    estimatedUsers: 12000,
-    availabilityLevel: 'alta',
-    selectedServices: ['ec2', 'rds', 'vpc'],
-    migrationGoal: 'Centralizar la información académica y reducir el mantenimiento del servidor local.',
-    status: 'en_revision',
-    priority: 'media',
-    createdAt: '2026-08-19T09:15:00.000Z'
-  },
-  {
-    id: 'prop-seed-3',
-    solutionName: 'Sistema de Telemetría IoT',
-    appType: 'Microservicios',
-    description: 'Ingesta y procesamiento de lecturas de sensores industriales con almacenamiento histórico.',
-    region: 'us-east-1',
-    estimatedUsers: 100000,
-    availabilityLevel: 'critica',
-    selectedServices: ['ec2', 's3', 'iam', 'vpc'],
-    migrationGoal: 'Escalar horizontalmente la ingesta de datos con tolerancia a fallos crítica.',
-    status: 'aprobada',
-    priority: 'alta',
-    createdAt: '2026-08-25T18:45:00.000Z'
-  },
-  {
-    id: 'prop-seed-4',
-    solutionName: 'App Móvil Delivery',
-    appType: 'Móvil',
-    description: 'Aplicación de reparto a domicilio con seguimiento de pedidos en tiempo real y contenido estático.',
-    region: 'sa-east-1',
-    estimatedUsers: 25000,
-    availabilityLevel: 'alta',
-    selectedServices: ['s3', 'cloudfront', 'route53', 'iam'],
-    migrationGoal: 'Distribuir assets con baja latencia y asegurar el acceso de los usuarios móviles.',
-    status: 'borrador',
-    priority: 'baja',
-    createdAt: '2026-09-01T11:00:00.000Z'
-  },
-  {
-    id: 'prop-seed-5',
-    solutionName: 'Plataforma Core Bancaria',
-    appType: 'Enterprise',
-    description: 'Núcleo transaccional bancario con aislamiento de red, auditoría de accesos y base de datos relacional.',
-    region: 'eu-west-1',
-    estimatedUsers: 8000,
-    availabilityLevel: 'critica',
-    selectedServices: ['ec2', 'rds', 'iam', 'vpc', 'route53'],
-    migrationGoal: 'Cumplir requisitos regulatorios con alta disponibilidad y trazabilidad completa.',
-    status: 'en_revision',
-    priority: 'alta',
-    createdAt: '2026-09-10T16:20:00.000Z'
-  }
-]
+/** Propuestas sembradas desde la lista maestra de proyectos. */
+const initialProposals: CloudProposal[] = CLOUD_PROJECTS.map((project) => ({
+  id: project.id,
+  solutionName: project.name,
+  appType: project.appType,
+  description: project.description,
+  region: project.regionId,
+  estimatedUsers: project.estimatedUsers,
+  availabilityLevel: project.availabilityLevel,
+  selectedServices: project.services,
+  migrationGoal: project.migrationGoal,
+  status: project.status,
+  priority: project.priority,
+  createdAt: project.createdAt
+}))
 
 function isProposalDate(value: unknown): value is string {
   return typeof value === 'string' && !Number.isNaN(new Date(value).getTime())
@@ -190,6 +123,10 @@ interface CloudStoreValue {
   servicesHistory: number[]
   monthlyHistory: number[]
   proposals: CloudProposal[]
+  /** Lista maestra de proyectos con estado y costos en vivo. */
+  projects: CloudProject[]
+  /** KPIs globales coherentes con todas las vistas. */
+  portfolio: PortfolioTotals
   monthlyBudgetLimit: number
   securityScore: number
   securityControls: Record<string, boolean>
@@ -282,7 +219,7 @@ function buildCostItems(servers: CloudServer[]): CostItem[] {
       unitCost,
       monthlyCost,
       annualCost: round2(monthlyCost * 12),
-      category: CATEGORY_MAP[serviceId] ?? 'Compute',
+      category: SERVICE_CATEGORY[serviceId] ?? 'Compute',
       environment
     })
   }
@@ -425,71 +362,45 @@ function deriveAlertEvents(servers: CloudServer[]): CloudLog[] {
   return alerts.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
 }
 
+/**
+ * El inventario se siembra desde `CLOUD_PROJECTS`: cada proyecto aporta sus
+ * recursos a su región. Infraestructura, costos, red y dashboard derivan todos
+ * de esta misma lista, garantizando coherencia total.
+ */
 function seedServers(): CloudServer[] {
   const servers: CloudServer[] = []
   let counter = 0
-  const make = (
-    serviceId: string,
-    regionId: string,
-    environment: CostEnvironment,
-    status: ServiceStatus = 'active'
-  ): CloudServer => {
-    counter += 1
-    return {
-      id: `srv-${counter}`,
-      name: `${serviceId}-${regionId}-${String(counter).padStart(3, '0')}`,
-      serviceId,
-      regionId,
-      environment,
-      status,
-      addedAt: Date.now() - (50 - counter) * 60_000
+
+  for (const project of CLOUD_PROJECTS) {
+    let flagged = false
+    for (const resource of project.resources) {
+      for (let i = 0; i < resource.quantity; i += 1) {
+        let status: ServiceStatus = 'active'
+        // Estados derivados de la postura central del proyecto.
+        if (!flagged && resource.environment === 'production') {
+          if (project.security.posture === 'critica' && project.security.criticalFindings > 1) {
+            status = 'inactive'
+            flagged = true
+          } else if (project.network.health !== 'estable') {
+            status = 'warning'
+            flagged = true
+          }
+        }
+
+        counter += 1
+        servers.push({
+          id: `srv-${counter}`,
+          name: `${resource.serviceId}-${project.regionId}-${String(counter).padStart(3, '0')}`,
+          serviceId: resource.serviceId,
+          regionId: project.regionId,
+          projectId: project.id,
+          environment: resource.environment,
+          status,
+          addedAt: Date.now() - (120 - counter) * 60_000
+        })
+      }
     }
   }
-
-  const spread = (regionId: string, plan: Array<[string, CostEnvironment, number?]>) => {
-    for (const [serviceId, environment, count] of plan) {
-      const limit = count ?? 1
-      for (let i = 0; i < limit; i++) servers.push(make(serviceId, regionId, environment))
-    }
-  }
-
-  spread('us-east-1', [
-    ['ec2', 'production', 7],
-    ['ec2', 'staging', 2],
-    ['rds', 'production', 2],
-    ['s3', 'staging', 2],
-    ['iam', 'production'],
-    ['vpc', 'production'],
-    ['route53', 'dev'],
-    ['cloudfront', 'production', 2]
-  ])
-
-  spread('sa-east-1', [
-    ['ec2', 'production', 1],
-    ['ec2', 'staging', 1],
-    ['rds', 'production', 1],
-    ['s3', 'staging', 1],
-    ['vpc', 'production', 2]
-  ])
-
-  servers.push(make('ec2', 'sa-east-1', 'production', 'inactive'))
-
-  spread('eu-west-1', [
-    ['ec2', 'production', 5],
-    ['ec2', 'staging', 1],
-    ['rds', 'production', 1],
-    ['s3', 'staging', 1],
-    ['iam', 'production'],
-    ['vpc', 'production'],
-    ['route53', 'dev', 2]
-  ])
-
-  spread('ap-southeast-1', [
-    ['ec2', 'production', 2],
-    ['s3', 'staging', 1],
-    ['cloudfront', 'production'],
-    ['vpc', 'production']
-  ])
 
   return servers
 }
@@ -700,6 +611,51 @@ export function CloudProvider({ children }: { children: ReactNode }) {
       .sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
       .slice(0, 50)
 
+    const securityScore = Math.round(
+      (Object.values(securityControls).filter(Boolean).length / SECURITY_CONTROL_TOTAL) * 100
+    )
+
+    // Proyectos = lista maestra + estado y costos en vivo (misma fuente para
+    // Planificación, Costos, Infraestructura, Red, Seguridad y Dashboard).
+    const statusById = new Map(proposals.map((proposal) => [proposal.id, proposal.status]))
+    const projects: CloudProject[] = CLOUD_PROJECTS.map((project) => {
+      const projectServers = servers.filter((server) => server.projectId === project.id)
+      const grouped = new Map<string, number>()
+      for (const server of projectServers) {
+        const key = `${server.serviceId}|${server.environment}`
+        grouped.set(key, (grouped.get(key) ?? 0) + 1)
+      }
+      const liveResources = Array.from(grouped.entries()).map(([key, quantity]) => {
+        const [serviceId, environment] = key.split('|')
+        return { serviceId, environment: environment as CostEnvironment, quantity }
+      })
+
+      return {
+        ...project,
+        status: statusById.get(project.id) ?? project.status,
+        liveMonthlyCost: round2(
+          liveResources.reduce(
+            (sum, resource) => sum + (UNIT_COSTS[resource.serviceId] ?? 0) * resource.quantity,
+            0
+          )
+        ),
+        resources: liveResources
+      }
+    })
+
+    const basePortfolio = portfolioTotals(projects)
+    const portfolio: PortfolioTotals = {
+      ...basePortfolio,
+      monthlyCost: totalMonthly,
+      annualCost: round2(totalMonthly * 12),
+      resources: servers.length,
+      budgetUsagePercent:
+        basePortfolio.monthlyBudget > 0
+          ? round2((totalMonthly / basePortfolio.monthlyBudget) * 100)
+          : 0,
+      securityScore
+    }
+
     return {
       servers,
       regions,
@@ -713,10 +669,10 @@ export function CloudProvider({ children }: { children: ReactNode }) {
       servicesHistory: history.map((point) => point.services),
       monthlyHistory: history.map((point) => point.monthlyCost),
       proposals,
-      monthlyBudgetLimit: MONTHLY_BUDGET_LIMIT,
-      securityScore: Math.round(
-        (Object.values(securityControls).filter(Boolean).length / SECURITY_CONTROL_TOTAL) * 100
-      ),
+      projects,
+      portfolio,
+      monthlyBudgetLimit: MONTHLY_BUDGET,
+      securityScore,
       securityControls,
       networkSimulationActive,
       addServer,
